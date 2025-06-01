@@ -1,0 +1,78 @@
+# ===================================
+# Visual Studio
+# ===================================
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.vsidx
+*.VC.db
+*.VC.VC.opendb
+
+# Build results
+[Bb]in/
+[Oo]bj/
+out/
+TestResults/
+build/
+
+# NuGet
+*.nupkg
+packages/
+*.snupkg
+
+# Dotnet secrets
+secrets.json
+
+# Logs
+*.log
+
+# ===================================
+# DuckDB
+# ===================================
+*.duckdb
+
+# ===================================
+# Flutter / Dart
+# ===================================
+.dart_tool/
+.flutter-plugins
+.packages
+.pub-cache/
+.pub/
+build/
+ios/Flutter/Flutter.framework/
+ios/Flutter/Flutter.podspec
+ios/ServiceDefinitions.json
+macos/Flutter/ephemeral/
+*.iml
+
+# Android Studio
+*.idea/
+*.gradle/
+android/local.properties
+
+# Xcode
+*.xcworkspace
+*.xcuserstate
+*.xcodeproj/project.xcworkspace
+ios/Runner.xcworkspace
+ios/Pods/
+ios/Podfile.lock
+
+# ===================================
+# OS / Misc
+# ===================================
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+*.bak
+
+# ===================================
+# Environment Files
+# ===================================
+.env
+.env.*
