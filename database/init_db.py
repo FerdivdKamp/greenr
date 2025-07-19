@@ -1,6 +1,12 @@
+import os
 import duckdb
 
 # Connect to or create the database file
+
+# Clean up
+if os.path.exists("carbon_tracker.duckdb"):
+    os.remove("carbon_tracker.duckdb")
+
 con = duckdb.connect("carbon_tracker.duckdb")
 
 # Create tables
