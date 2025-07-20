@@ -16,6 +16,9 @@ Installing DuckDb for CLI usage, (not required) also see [DuckDb documentation](
 To create the database, structure `python database/init_db.py`
 To Create some test data, run `python database/init_test_data.py`
 
+
+During testing updating the database can be a bit of work, it might be simpler to just delete the [NAME].duckdb and run the python scripts again.
+
 To query from terminal
 
 `duckdb carbon_tracker.duckdb`

@@ -7,6 +7,6 @@ public class Item
     public string UseCase { get; set; } = "";
     public decimal Price { get; set; }
     public decimal FootprintKg { get; set; }
-    public DateTime DateOfPurchase { get; set; }
+    public DateOnly? DateOfPurchase { get; set; }
 
 }

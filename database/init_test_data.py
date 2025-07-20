@@ -56,7 +56,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     uuid.uuid4(),
     user_id,
     "Samsung Galaxy S10e",
-    None,  # No purchase date provided
+    date(2021, 10, 28),  # No purchase date provided
     "smartphone",
     330.0,
     85.0,

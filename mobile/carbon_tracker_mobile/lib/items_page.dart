@@ -77,6 +77,7 @@ class _ItemsPageState extends State<ItemsPage> {
               child: _FootprintTrendChart(
                 startDate: item.dateOfPurchase ?? DateTime.now().subtract(const Duration(days: 365)),
                 initialFootprint: item.footprintKg,
+                price: item.price,
               ),
             ),
           ],
@@ -104,68 +105,127 @@ class _ItemsPageState extends State<ItemsPage> {
   }
 }
 
-// ✅ Move this outside the State class
+// Parameters
 class _FootprintTrendChart extends StatelessWidget {
   final DateTime startDate;
   final double initialFootprint;
+  final double price;
 
   const _FootprintTrendChart({
     required this.startDate,
     required this.initialFootprint,
+    required this.price,
   });
 
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final months = _generateMonthList(startDate, now);
-    final step = initialFootprint / max(1, (months.length - 1));
+    final totalMonths = max(1, months.length - 1);
+    final useYears = months.length > 60;
+
+    // Generate price and footprint per month
+    final pricePerMonth = price / totalMonths;
+    final footprintPerMonth = initialFootprint / totalMonths;
+
+
+    final priceSpots = List.generate(
+      months.length,
+      (i) => FlSpot(i.toDouble(), (price - i * pricePerMonth).clamp(0, price)),
+    );
+
+    final footprintSpots = List.generate(
+      months.length,
+      (i) => FlSpot(i.toDouble(), (initialFootprint - i * footprintPerMonth).clamp(0, initialFootprint)),
+    );
 
     return SizedBox(
       height: 200,
       child: LineChart(
-        LineChartData(
-          lineBarsData: [
-            LineChartBarData(
-              spots: List.generate(
-                months.length,
-                (i) => FlSpot(
-                  i.toDouble(),
-                  (initialFootprint - i * step).clamp(0, initialFootprint),
-                ),
-              ),
-              isCurved: true,
-              barWidth: 2,
-              color: Colors.green,
-              dotData: const FlDotData(show: false),
-            ),
-          ],
-          gridData: const FlGridData(show: true),
-          titlesData: FlTitlesData(
-            leftTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: true),
-            ),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                interval: 1,
-                getTitlesWidget: (value, meta) {
-                  final index = value.toInt();
-                  if (index < 0 || index >= months.length) return const SizedBox.shrink();
-                  final month = months[index];
-                  return Text('${month.month}/${month.year % 100}', style: const TextStyle(fontSize: 10));
-                },
-              ),
-            ),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          ),
-          borderData: FlBorderData(show: true),
-          minX: 0,
-          maxX: (months.length - 1).toDouble(),
-          minY: 0,
-          maxY: initialFootprint,
+  LineChartData(
+    lineBarsData: [
+      LineChartBarData(
+        spots: priceSpots,
+        isCurved: false,
+        barWidth: 2,
+        color: Colors.blue,
+        dotData: const FlDotData(show: false),
+      ),
+      LineChartBarData(
+        spots: footprintSpots,
+        isCurved: false,
+        barWidth: 2,
+        color: Colors.green,
+        dotData: const FlDotData(show: false),
+      ),
+    ],
+    minX: 0,
+    maxX: (months.length - 1).toDouble(),
+    minY: 0,
+    maxY: max(price, initialFootprint) * 1.2,
+    gridData: const FlGridData(show: true),
+    borderData: FlBorderData(show: true),
+    titlesData: FlTitlesData(
+      bottomTitles: AxisTitles(
+        sideTitles: SideTitles(
+          showTitles: true,
+          interval: 1,
+          getTitlesWidget: (value, meta) {
+            final index = value.toInt();
+            if (index < 0 || index >= months.length) return const SizedBox.shrink();
+            final date = months[index];
+
+            return Text(
+              useYears ? '${date.year}' : '${date.month}/${date.year % 100}',
+              style: const TextStyle(fontSize: 10),
+            );
+          },
         ),
       ),
+      leftTitles: AxisTitles(
+        sideTitles: SideTitles(
+          showTitles: true,
+          reservedSize: 40,
+          getTitlesWidget: (value, meta) => Text('€${value.toStringAsFixed(0)}', style: const TextStyle(fontSize: 10)),
+        ),
+      ),
+      rightTitles: AxisTitles(
+        sideTitles: SideTitles(
+          showTitles: true,
+          reservedSize: 40,
+          getTitlesWidget: (value, meta) => Text('${value.toStringAsFixed(1)}kg', style: const TextStyle(fontSize: 10)),
+        ),
+      ),
+      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+    ),
+    lineTouchData: LineTouchData(
+      touchTooltipData: LineTouchTooltipData(
+        fitInsideHorizontally : true,
+        fitInsideVertically: true,
+        getTooltipColor: (LineBarSpot spot) => const Color.fromARGB(40, 0, 0, 0),
+        tooltipPadding: const EdgeInsets.all(8),
+        getTooltipItems: (touchedSpots) {
+          return touchedSpots.map((spot) {
+            final index = spot.x.toInt();
+            if (index < 0 || index >= months.length) return null;
+            final date = months[index];
+            final monthsSincePurchase = max(1, index);
+            final pricePerMonth = price / monthsSincePurchase;
+            final footprintPerMonth = initialFootprint / monthsSincePurchase;
+
+            return LineTooltipItem(
+              '${date.year}-${date.month.toString().padLeft(2, '0')}\n'
+              '€${pricePerMonth.toStringAsFixed(2)} / mo\n'
+              '${footprintPerMonth.toStringAsFixed(1)} kg CO₂ / mo',
+              const TextStyle(color: Colors.black, fontSize: 12),
+            );
+          }).toList();
+        },
+      ),
+    ),
+  ),
+),
+
     );
   }
 

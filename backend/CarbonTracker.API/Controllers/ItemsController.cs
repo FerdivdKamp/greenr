@@ -36,11 +36,9 @@ public class ItemsController : ControllerBase
             var useCase = reader["use_case"]?.ToString() ?? "";
             var price = Convert.ToDecimal(reader["price"]);
             var footprintKg = Convert.ToDecimal(reader["footprint_kg"]);
-            DateTime? dateOfPurchase = reader["date_of_purchase"] == DBNull.Value
-    ? (DateTime?)null
-    : Convert.ToDateTime(reader["date_of_purchase"]);
-
-
+            DateOnly? dateOfPurchase = reader["date_of_purchase"] == DBNull.Value
+                ? null
+                : (DateOnly)reader["date_of_purchase"];
 
             items.Add(new Item
             {
