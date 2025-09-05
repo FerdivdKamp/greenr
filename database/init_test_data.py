@@ -56,7 +56,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     uuid.uuid4(),
     user_id,
     "Samsung Galaxy S10e",
-    date(2021, 10, 28),  # No purchase date provided
+    date(2021, 10, 28),
     "smartphone",
     330.0,
     85.0,
@@ -64,5 +64,35 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     datetime.now()
 ))
 
+# Nike running shoes
+con.execute("""
+INSERT INTO items (item_id, user_id, item_name, date_of_purchase, use_case, price, footprint_kg, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+""", (
+    uuid.uuid4(),
+    user_id,
+    "Nike VaporFly 2 ",
+    date(2021, 10, 28),
+    "sport",
+    175.0,
+    15.0,
+    datetime.now(),
+    datetime.now()
+))
+
+con.execute("""
+INSERT INTO items (item_id, user_id, item_name, date_of_purchase, use_case, price, footprint_kg, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+""", (
+    uuid.uuid4(),
+    user_id,
+    "Kobo Glo HD",
+    date(2016, 8, 1), 
+    "entertainment",
+    120.0,
+    40.0,
+    datetime.now(),
+    datetime.now()
+))
 
 print("User inserted with user_id:", user_id)
