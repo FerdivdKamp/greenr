@@ -8,6 +8,41 @@ src/components/ → for shared UI bits
 
 src/lib/ → for utilities (like API client, env config)
 
+```
+frontend/
+├── public/                     # Static assets (copied as-is to build)
+│   └── vite.svg
+├── src/                        # Application source code
+│   ├── app/                    # Global app setup
+│   │   ├── queryClient.ts      # React Query client (API cache manager)
+│   │   └── router.tsx          # React Router configuration (pages, routes)
+│   │
+│   ├── features/               # Feature-based modules
+│   │   └── items/              # Example feature: Items
+│   │       ├── ItemsPage.tsx   # React component (UI with table + button)
+│   │       ├── api.ts          # API calls for Items (http.get("/Items"))
+│   │       └── types.ts        # TypeScript interfaces for Item
+│   │
+│   ├── home/                   # Example "Home" page
+│   │   └── Home.tsx
+│   │
+│   ├── lib/                    # Reusable utilities
+│   │   ├── env.ts              # Centralized environment variables
+│   │   └── http.ts             # HTTP helper (fetch wrapper)
+│   │
+│   ├── App.tsx                 # App layout (header + navigation)
+│   ├── main.tsx                # Application entry (ReactDOM + providers)
+│   ├── index.css               # Global styles
+│   └── vite-env.d.ts           # Vite TypeScript types
+│
+├── .eslintrc.js / eslint.config.js # ESLint config (linting rules)
+├── package.json                # Project dependencies + scripts
+├── tsconfig.json               # TypeScript compiler config
+├── vite.config.ts              # Vite build/dev config (proxy, plugins)
+└── typedoc.json                # TypeDoc config for API documentation
+
+```
+
 
 ## TypeDoc
 Technical documentation 

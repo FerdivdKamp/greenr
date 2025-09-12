@@ -19,7 +19,8 @@ export interface FrontendEnv {
  * Resolved, strongly-typed environment values.
  */
 export const env: FrontendEnv = {
-  API_BASE_URL: import.meta.env.VITE_API_BASE_URL ?? "/api",
+  // API_BASE_URL: import.meta.env.VITE_API_BASE_URL ?? "/api",
+  API_BASE_URL: import.meta.env.VITE_API_BASE_URL ?? "",
 } as const;
 
 /**
