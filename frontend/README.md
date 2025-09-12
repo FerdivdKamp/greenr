@@ -9,6 +9,19 @@ src/components/ → for shared UI bits
 src/lib/ → for utilities (like API client, env config)
 
 
+## TypeDoc
+Technical documentation 
+
+`npm run docs`
+Stores the html documation in subfolder typedoc, you can just open index.html
+
+`npm run docs:open`
+Runs the documentation in a local server
+
+
+
+## StoryBooks
+TO BE ADDED
 
 
 # Template stuff
