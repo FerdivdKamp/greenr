@@ -18,3 +18,8 @@ Swagger is a set of tools and standards for documenting, testing, and interactin
 You will the it's listening to one or more addresses, you can copy-paste either of the addresses and add /swagger to open the Swagger UI in the browser.
 
 
+For example:
+```
+http://localhost:5285/swagger/index.html
+```
+

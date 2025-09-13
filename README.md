@@ -16,3 +16,12 @@ To get started.
 1. Open the mobile app, run the emulator and after that flutter
 
 The mobile app will talk with the database through the backend.
+
+
+
+## Frontend
+
+Uses react typescript and vite
+https://nodejs.org/en/download
+
+

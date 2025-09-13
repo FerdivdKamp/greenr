@@ -15,23 +15,26 @@ public class ItemsController : ControllerBase
         _configuration = configuration;
     }
 
+    private DuckDBConnection CreateConnection()
+    {
+        var connectionString = _configuration.GetConnectionString("DuckDb");
+        var conn = new DuckDBConnection(connectionString);
+        conn.Open();
+        return conn;
+    }
+
     [HttpGet]
     public IActionResult Get()
     {
         var items = new List<Item>();
-        var connectionString = _configuration.GetConnectionString("DuckDb");
-
-        using var conn = new DuckDBConnection(connectionString);
-        conn.Open();
-
+        using var conn = CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT item_id, item_name, use_case, price, footprint_kg, date_of_purchase FROM items";
-
         using var reader = cmd.ExecuteReader();
 
-        while (reader.Read()) // ✅ This is required before any GetX() call
+        while (reader.Read())
         {
-            var itemId = reader["item_id"].ToString(); // safer than GetGuid
+            var itemId = reader["item_id"].ToString();
             var itemName = reader["item_name"]?.ToString() ?? "";
             var useCase = reader["use_case"]?.ToString() ?? "";
             var price = Convert.ToDecimal(reader["price"]);
@@ -48,11 +51,55 @@ public class ItemsController : ControllerBase
                 Price = price,
                 FootprintKg = footprintKg,
                 DateOfPurchase = dateOfPurchase,
-
             });
         }
 
         return Ok(items);
+    }
+
+    [HttpPost]
+    public IActionResult AddItem([FromBody] Item item)
+    {
+        if (item == null)
+            return BadRequest();
+
+        using var conn = CreateConnection();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"INSERT INTO items (item_id, item_name, use_case, price, footprint_kg, date_of_purchase)
+                            VALUES (?, ?, ?, ?, ?, ?)";
+        var itemId = item.ItemId == Guid.Empty ? Guid.NewGuid() : item.ItemId;
+
+        cmd.Parameters.Add(new DuckDBParameter { Value = itemId });
+        cmd.Parameters.Add(new DuckDBParameter { Value = item.ItemName ?? "" });
+        cmd.Parameters.Add(new DuckDBParameter { Value = item.UseCase ?? "" });
+        cmd.Parameters.Add(new DuckDBParameter { Value = item.Price });
+        cmd.Parameters.Add(new DuckDBParameter { Value = item.FootprintKg });
+        cmd.Parameters.Add(new DuckDBParameter { Value = item.DateOfPurchase ?? (object)DBNull.Value });
+
+        var result = cmd.ExecuteNonQuery();
+        return result > 0 ? Ok(item) : StatusCode(500, "Insert failed");
+    }
+
+    [HttpPut("{id:guid}")]
+    public IActionResult UpdateItem(Guid id, [FromBody] Item item)
+    {
+        if (item == null)
+            return BadRequest();
+
+        using var conn = CreateConnection();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"UPDATE items SET item_name = ?, use_case = ?, price = ?, footprint_kg = ?, date_of_purchase = ?
+                        WHERE item_id = ?";
+
+        cmd.Parameters.Add(new DuckDBParameter { Value = item.ItemName ?? "" });
+        cmd.Parameters.Add(new DuckDBParameter { Value = item.UseCase ?? "" });
+        cmd.Parameters.Add(new DuckDBParameter { Value = item.Price });
+        cmd.Parameters.Add(new DuckDBParameter { Value = item.FootprintKg });
+        cmd.Parameters.Add(new DuckDBParameter { Value = item.DateOfPurchase ?? (object)DBNull.Value });
+        cmd.Parameters.Add(new DuckDBParameter { Value = id });
+
+        var result = cmd.ExecuteNonQuery();
+        return result > 0 ? Ok(item) : NotFound();
     }
 
 }
