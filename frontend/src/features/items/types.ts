@@ -4,6 +4,6 @@ export interface Item {
   itemName: string;
   useCase: string;
   price: number;
-  footprintKG: number;
+  footprintKg: number;
   dateOfPurchase: string; // ISO date
 }

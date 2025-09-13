@@ -1,12 +1,53 @@
 # React + TypeScript + Vite
 
 
+To start locally
+```
+npm run dev
+```
+
+
 ### Folder structure  
 src/features/ → group related components + API calls
 
 src/components/ → for shared UI bits
 
 src/lib/ → for utilities (like API client, env config)
+
+
+
+```
+src/
+  app/
+    router.tsx            # routes definition
+    queryClient.ts        # React Query client
+    providers.tsx         # (optional) global contexts
+  pages/
+    HomePage.tsx          # route-level component (URL = "/")
+    ItemsPage.tsx         # route-level component (URL = "/items")
+  features/
+    items/
+      api.ts              # calls backend (/Items, mutations, etc.)
+      types.ts            # Item type(s)
+      hooks.ts            # useItems(), useCreateItem() etc.
+      components/
+        ItemsTable.tsx    # UI specific to "items" feature (used by ItemsPage)
+      __tests__/...       # (optional)
+  components/
+    Button.tsx            # shared UI primitives (used anywhere)
+    Modal.tsx
+    DataTable.tsx         # generic table you can reuse across features
+  lib/
+    http.ts               # fetch wrapper
+    env.ts                # runtime config
+    format.ts             # e.g., money/date formatters
+  styles/
+    index.css
+  App.tsx                 # app shell/layout (header/nav + <Outlet/>)
+  main.tsx                # ReactDOM + providers
+
+```
+
 
 ```
 frontend/
