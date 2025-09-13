@@ -72,7 +72,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     uuid.uuid4(),
     user_id,
     "Nike VaporFly 2 ",
-    date(2021, 10, 28),
+    date(2023, 4, 23),
     "sport",
     175.0,
     15.0,

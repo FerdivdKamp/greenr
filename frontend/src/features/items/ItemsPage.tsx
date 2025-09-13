@@ -1,71 +1,95 @@
-import { useMemo, useState } from "react";
+// src/features/items/ItemsPage.tsx
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getItems } from "./api";
-import PriceBarChart from "../../components/charts/PriceBarChart";
-import ItemDetailChart from "../../components/charts/ItemDetailChart";
 import Button from "../../components/ui/Button";
+import PriceBarChart from "../../components/charts/PriceBarChart";
+import ItemTimelineCharts from "../../components/charts/ItemTimelineCharts";
 import { ItemsTable } from "./components/ItemsTable";
+import type { Item } from "./types"; // <-- { itemId, itemName, useCase, price, footprintKg, dateOfPurchase }
 
-export type Item = {
-  id: string;
-  name: string;
-  useCase: string;
-  price: number;
-  footprintKg: number;
-  purchased: string; // ISO date
-};
-
+/**
+ * ItemsPage
+ * - Manual fetch (Load items) so you control when data loads
+ * - Use-case filter
+ * - Bar chart (price per item) toggle
+ * - Timeline charts (price + footprint) for ONE selected item, with dropdown
+ */
 export default function ItemsPage() {
-  // manual fetch so we have a "Load items" button
+  // Manual fetch → shows "Load items" button
   const { data, isFetching, error, refetch, isSuccess } = useQuery<Item[]>({
     queryKey: ["items"],
     queryFn: getItems,
     enabled: false,
   });
 
+  // UI state
   const [useCaseFilter, setUseCaseFilter] = useState("all");
-  const [selected, setSelected] = useState<Item | null>(null);
-  const [showChart, setShowChart] = useState(false);
+  const [showBarChart, setShowBarChart] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  // When data arrives the first time, default the timeline dropdown to the first item
+  useEffect(() => {
+    if (data && data.length > 0 && !selectedId) {
+      setSelectedId(data[0].itemId);
+    }
+  }, [data, selectedId]);
+
+  // Build distinct list of use-cases
   const useCases = useMemo(() => {
     const s = new Set<string>();
-    (data ?? []).forEach((i) => s.add(i.useCase));
+    (data ?? []).forEach(i => s.add(i.useCase));
     return ["all", ...Array.from(s).sort((a, b) => a.localeCompare(b))];
   }, [data]);
 
-  const filtered = useMemo(() => {
+  // Apply use-case filter
+  const filtered: Item[] = useMemo(() => {
     if (!data) return [];
-    return useCaseFilter === "all"
-      ? data
-      : data.filter((i) => i.useCase === useCaseFilter);
+    return useCaseFilter === "all" ? data : data.filter(i => i.useCase === useCaseFilter);
   }, [data, useCaseFilter]);
+
+  // Resolve the item chosen for the timeline charts
+  const selectedItem = useMemo(
+    () => (data ?? []).find(i => i.itemId === selectedId) || null,
+    [data, selectedId]
+  );
 
   return (
     <div className="p-4 space-y-6">
+      {/* Header + actions */}
       <div className="flex items-center gap-3">
-        <h1 className="text-xl font-semibold">Items</h1>
+        <h1 className="text-2xl font-bold">Items</h1>
 
-        {/* Load items */}
+        {/* Load items (manual) */}
         <Button size="sm" onClick={() => refetch()} disabled={isFetching}>
           {isFetching ? "Loading…" : isSuccess ? "Reload items" : "Load items"}
         </Button>
 
-        {/* Toggle chart */}
+        {/* Toggle bar chart */}
         <Button
           size="sm"
           variant="secondary"
-          onClick={() => setShowChart((v) => !v)}
+          onClick={() => setShowBarChart(v => !v)}
           disabled={!data || data.length === 0}
         >
-          {showChart ? "Hide chart" : "Create bar chart"}
+          {showBarChart ? "Hide bar chart" : "Create bar chart"}
         </Button>
 
-        {error && (
-          <span className="text-red-400 text-sm">Failed to load.</span>
-        )}
+        {/* Toggle timeline */}
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => setShowTimeline(v => !v)}
+          disabled={!data || data.length === 0}
+        >
+          {showTimeline ? "Hide item timeline" : "Show item timeline"}
+        </Button>
+
+        {error && <span className="text-red-400 text-sm">Failed to load.</span>}
       </div>
 
-      {/* Filter */}
+      {/* Use-case filter */}
       <div className="flex items-center gap-3">
         <label className="text-sm opacity-80">Use case</label>
         <select
@@ -74,55 +98,53 @@ export default function ItemsPage() {
           onChange={(e) => setUseCaseFilter(e.target.value)}
           disabled={!data}
         >
-          {useCases.map((uc) => (
-            <option key={uc} value={uc}>
-              {uc}
-            </option>
+          {useCases.map(uc => (
+            <option key={uc} value={uc}>{uc}</option>
           ))}
         </select>
       </div>
 
-      {/* Chart (optional) */}
-      {showChart && filtered.length > 0 && (
+      {/* Bar chart: price per item (for the filtered list) */}
+      {showBarChart && filtered.length > 0 && (
         <div className="bg-neutral-900/40 rounded-2xl p-4">
           <PriceBarChart
-            items={filtered}
-            onBarClick={(itemId) => {
-              const it = filtered.find((i) => i.id === itemId) ?? null;
-              setSelected(it);
-            }}
+            items={filtered}                 // expects Item with itemId/itemName/price
+            onBarClick={(itemId) => setSelectedId(itemId)}  // clicking a bar selects item for timeline
             height={360}
           />
         </div>
       )}
 
-      {/* ✅ Data table is back */}
-      {isSuccess && (
-        <div className="bg-neutral-900/40 rounded-2xl p-2">
-          <ItemsTable
-            items={filtered}
-            loading={isFetching}              // if your table prop is `isLoading`, rename here
-            onRowClick={(it: Item) => setSelected(it)} // optional: open detail on row click
-          />
+      {/* Timeline controls: choose ONE item (only when timeline is visible) */}
+      {showTimeline && data && data.length > 0 && (
+        <div className="flex items-center gap-3">
+          <label className="text-sm opacity-80">Item</label>
+          <select
+            className="bg-transparent border rounded px-2 py-1"
+            value={selectedId ?? ""}
+            onChange={(e) => setSelectedId(e.target.value)}
+          >
+            {data.map(it => (
+              <option key={it.itemId} value={it.itemId}>
+                {it.itemName}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 
-      {/* Detail overlay */}
-      {selected && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-neutral-900 p-4 rounded-2xl w-[min(92vw,900px)]">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold">{selected.name}</h2>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => setSelected(null)}
-              >
-                Close
-              </Button>
-            </div>
-            <ItemDetailChart item={selected} height={360} />
-          </div>
+      {/* Two synchronized line charts: price & footprint for the selected item */}
+      {showTimeline && selectedItem && (
+        <div className="bg-neutral-900/40 rounded-2xl p-4">
+          <ItemTimelineCharts item={selectedItem} />
+        </div>
+      )}
+
+      {/* Data table always visible after first successful load */}
+      {isSuccess && (
+        <div className="bg-neutral-900/40 rounded-2xl p-2">
+          {/* ItemsTable already uses the correct accessors (itemId, itemName, ...) */}
+          <ItemsTable items={filtered} />
         </div>
       )}
     </div>
