@@ -1,4 +1,4 @@
-## Introduction to the greenr backend
+﻿## Introduction to the greenr backend
 
 
 To run the backend, when this is running you can start the mobile app (see the mobile app README).
@@ -23,3 +23,24 @@ For example:
 http://localhost:5285/swagger/index.html
 ```
 
+```
+CarbonTracker.API/ # Main Web API project
+├── Connected Services/ # (auto-generated) external service references
+├── Dependencies/ # NuGet packages
+├── Imports/ # Global using directives (C# 10+)
+├── Properties/
+│ └── launchSettings.json # Local run/debug profiles (e.g. IIS Express, Kestrel)
+├── Contracts/ # API contracts (DTOs) exposed over the wire
+│ └── ItemDto.cs # Shape of Item returned/accepted by API
+├── Controllers/ # API controllers (routes, request handling)
+│ ├── ItemsController.cs # Endpoints for items (/api/items)
+│ └── UsersController.cs # Endpoints for users (/api/users)
+├── Mapping/ # Mapping logic between Models and DTOs
+│ └── ItemMapping.cs # Extension methods: Item ↔ ItemDto
+├── Models/ # Domain/data models (DB-facing)
+│ ├── Items.cs # Item entity mapped to DuckDB items table
+│ └── User.cs # User entity mapped to DuckDB users table
+├── appsettings.json # Configuration (connection strings, logging, etc.)
+├── bin/ # Build output binaries
+└── obj/ # Build artifacts (intermediate)
+```

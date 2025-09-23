@@ -5,7 +5,7 @@ using CarbonTracker.API.Models;
 namespace CarbonTracker.API.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/users")]
 public class UsersController : ControllerBase
 {
     private readonly IConfiguration _configuration;

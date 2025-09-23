@@ -5,7 +5,7 @@ using CarbonTracker.API.Models;
 namespace CarbonTracker.API.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/items")]
 public class ItemsController : ControllerBase
 {
     private readonly IConfiguration _configuration;
