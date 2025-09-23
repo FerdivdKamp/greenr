@@ -52,7 +52,7 @@ class _ItemsPageState extends State<ItemsPage> {
   }
 
   Future<List<Item>> fetchItems() async {
-    final response = await http.get(Uri.parse('http://10.0.2.2:7285/items'));
+    final response = await http.get(Uri.parse('http://10.0.2.2:7285/api/items'));
 
     if (response.statusCode == 200) {
       final List<dynamic> body = json.decode(response.body);

@@ -56,7 +56,7 @@ class _UserListScreenState extends State<UserListScreen> {
   }
 
   Future<List<User>> fetchUsers() async {
-    final response = await http.get(Uri.parse('http://10.0.2.2:7285/users'));
+    final response = await http.get(Uri.parse('http://10.0.2.2:7285/api/users'));
 
     if (response.statusCode == 200) {
       List<dynamic> body = json.decode(response.body);

@@ -12,7 +12,7 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/Items": {
+      "/api": {
         target: "http://localhost:5285",
         // your .NET HTTPS port
         changeOrigin: true,

@@ -168,3 +168,16 @@ export default tseslint.config([
   },
 ])
 ```
+
+
+```mermaid
+sequenceDiagram
+    participant UI as React (Vite dev server :5173)
+    participant Proxy as Vite Proxy (/api → :5285)
+    participant API as ASP.NET API (:5285)
+
+    UI->>Proxy: GET /api/items
+    Proxy->>API: GET http://localhost:5285/api/items
+    API-->>Proxy: 200 OK (JSON)
+    Proxy-->>UI: 200 OK (JSON)
+```
