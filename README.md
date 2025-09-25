@@ -25,3 +25,15 @@ Uses react typescript and vite
 https://nodejs.org/en/download
 
 
+
+# Functional stuff
+
+## Creating questionnaires
+
+I don't know yet..
+https://surveyjs.io/try/reactjs#try-creator
+
+You can save and edit the JSON locally
+
+After that the backend has an endpoint to store the questionnaire in the database.
+
