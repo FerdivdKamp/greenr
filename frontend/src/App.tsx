@@ -44,6 +44,7 @@ export default function App() {
         <nav style={{ display: "flex", gap: 12 }}>
           <Link to="/">Home</Link>
           <Link to="/items">Items</Link>
+          <Link to="/questionnaires">Questionnaires</Link>
         </nav>
       </header>
       <main><Outlet /></main>
