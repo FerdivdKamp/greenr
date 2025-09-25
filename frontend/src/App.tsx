@@ -39,7 +39,7 @@ import { Link, Outlet } from "react-router-dom";
 
 export default function App() {
   return (
-    <div style={{ backgroundColor: "lightgrey", minHeight: "100vh" }}>
+    <div style={{ backgroundColor: "#939393ff", minHeight: "100vh" }}>
       <header
         style={{
           padding: "16px",
@@ -52,18 +52,18 @@ export default function App() {
         }}
       >
         <nav style={{ display: "flex", gap: "16px" }}>
-          <Link to="/" style={{ color: "green", textDecoration: "none" }}>
+          <Link to="/" style={{ color: "#22ea75ff", textDecoration: "none" }}>
             Home
           </Link>
           <Link
             to="/items"
-            style={{ color: "green", textDecoration: "none" }}
+            style={{ color: "#22ea75ff", textDecoration: "none" }}
           >
             Items
           </Link>
           <Link
             to="/questionnaires"
-            style={{ color: "green", textDecoration: "none" }}
+            style={{ color: "#22ea75ff", textDecoration: "none" }}
           >
             Questionnaires
           </Link>
