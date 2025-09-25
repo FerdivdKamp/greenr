@@ -61,5 +61,5 @@ export function DataTable<T>({
   );
 }
 
-const th: React.CSSProperties = { textAlign: "left", borderBottom: "1px solid #ddd", padding: 8 };
-const td: React.CSSProperties = { borderBottom: "1px solid #eee", padding: 8 };
+const th: React.CSSProperties = { textAlign: "left", borderBottom: "1px solid #bfbfbfff", padding: 8 };
+const td: React.CSSProperties = { borderBottom: "1px solid #c5c5c5ff", padding: 8 };
