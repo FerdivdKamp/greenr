@@ -19,13 +19,16 @@ To Create some test data, run `python database/init_test_data.py`
 
 During testing updating the database can be a bit of work, it might be simpler to just delete the [NAME].duckdb and run the python scripts again.
 
-To query from terminal
+To query from terminal run this to open db
 
 `duckdb carbon_tracker.duckdb`
 
 `select * from items;`
 
+Describe TABLE
+`DESCRIBE response;`  
 
-The quit the shell
+Describe all tables in schema
+`SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema = 'main';`
 
-`.quit`
+The quit the shell CTRL+C or `.quit`
