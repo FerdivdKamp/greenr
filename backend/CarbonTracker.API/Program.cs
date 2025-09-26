@@ -1,49 +1,44 @@
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.Filters;
+using System.Reflection;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-
 builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    // Declare a doc explicitly so UI always has a valid spec
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "CarbonTracker.API",
+        Version = "v1",
+        Description = "Greenr / CarbonTracker APIs"
+    });
+    c.EnableAnnotations();
+
+    // Include XML comments ONLY if the file exists (prevents errors)
+    var xml = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xml);
+    if (File.Exists(xmlPath))
+        c.IncludeXmlComments(xmlPath);
+    c.ExampleFilters();
+    c.DocumentFilter<TagDescriptionsDocumentFilter>();
+});
+
+builder.Services.AddSwaggerExamplesFromAssemblies(Assembly.GetExecutingAssembly());
+
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(o =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    // Force the UI to load *this* spec URL explicitly
+    o.SwaggerEndpoint("/swagger/v1/swagger.json", "CarbonTracker.API v1");
+    o.RoutePrefix = "swagger";
+    o.DocumentTitle = "CarbonTracker.API";
+});
 
-// app.UseHttpsRedirection();
 app.MapControllers();
-
-
-//var summaries = new[]
-//{
-//    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-//};
-
-//app.MapGet("/weatherforecast", () =>
-//{
-//    var forecast =  Enumerable.Range(1, 5).Select(index =>
-//        new WeatherForecast
-//        (
-//            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-//            Random.Shared.Next(-20, 55),
-//            summaries[Random.Shared.Next(summaries.Length)]
-//        ))
-//        .ToArray();
-//    return forecast;
-//})
-//.WithName("GetWeatherForecast")
-//.WithOpenApi();
-
 app.Run();
-
-//record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-//{
-//    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-//}
