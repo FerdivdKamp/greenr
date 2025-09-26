@@ -32,3 +32,10 @@ Describe all tables in schema
 `SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema = 'main';`
 
 The quit the shell CTRL+C or `.quit`
+
+
+
+```SQL
+select id, canonical_id, version, status, supersedes_id, replaced_by_id, created_at
+from questionnaire;
+```

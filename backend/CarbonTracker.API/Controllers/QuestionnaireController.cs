@@ -316,4 +316,111 @@ public class QuestionnaireController : ControllerBase
         tx.Commit();
         return NoContent();
     }
+
+    [HttpPost("families/{canonicalId:guid}/publish")]
+    [SwaggerOperation(Summary = "Publish within a canonical family",
+    Description = "Activate a version by targetId, targetVersion, or latest=true. " +
+                  "Inactivates the previous active version and sets its replaced_by_id = target.")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]        // success (no body)
+    [ProducesResponseType(StatusCodes.Status404NotFound)]         // not found
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]       // bad input
+
+    public IActionResult PublishByCanonical(Guid canonicalId, [FromBody] PublishByCanonicalRequest body)
+    {
+        using var conn = CreateConnection();
+        using var tx = conn.BeginTransaction();
+
+        // 1) Resolve the target version id within the family
+        Guid targetId;
+
+        if (body.TargetId.HasValue)
+        {
+            using var check = conn.CreateCommand();
+            check.Transaction = tx;
+            check.CommandText = "SELECT 1 FROM questionnaire WHERE id = ? AND canonical_id = ?";
+            check.Parameters.Add(new DuckDBParameter { Value = body.TargetId.Value });
+            check.Parameters.Add(new DuckDBParameter { Value = canonicalId });
+            var ok = check.ExecuteScalar();
+            if (ok is null)
+            {
+                tx.Rollback();
+                return BadRequest("targetId does not belong to the specified canonicalId.");
+            }
+            targetId = body.TargetId.Value;
+        }
+        else if (body.TargetVersion.HasValue)
+        {
+            using var getByVersion = conn.CreateCommand();
+            getByVersion.Transaction = tx;
+            getByVersion.CommandText = "SELECT id FROM questionnaire WHERE canonical_id = ? AND version = ?";
+            getByVersion.Parameters.Add(new DuckDBParameter { Value = canonicalId });
+            getByVersion.Parameters.Add(new DuckDBParameter { Value = body.TargetVersion.Value });
+
+            var res = getByVersion.ExecuteScalar()?.ToString();
+            if (!Guid.TryParse(res, out targetId))
+            {
+                tx.Rollback();
+                return NotFound("No questionnaire found for that canonicalId + version.");
+            }
+        }
+        else if (body.Latest)
+        {
+            using var getLatest = conn.CreateCommand();
+            getLatest.Transaction = tx;
+            getLatest.CommandText = @"
+            SELECT id FROM questionnaire
+            WHERE canonical_id = ?
+            ORDER BY version DESC
+            LIMIT 1";
+            getLatest.Parameters.Add(new DuckDBParameter { Value = canonicalId });
+
+            var res = getLatest.ExecuteScalar()?.ToString();
+            if (!Guid.TryParse(res, out targetId))
+            {
+                tx.Rollback();
+                return NotFound("No versions exist for this canonicalId.");
+            }
+        }
+        else
+        {
+            tx.Rollback();
+            return BadRequest("Provide targetId, targetVersion, or set latest=true.");
+        }
+
+        // 2) Inactivate any currently active in this family and link it to the target
+        using (var cmdInactive = conn.CreateCommand())
+        {
+            cmdInactive.Transaction = tx;
+            cmdInactive.CommandText = @"
+            UPDATE questionnaire
+               SET status = 'inactive',
+                   updated_at = CURRENT_TIMESTAMP,
+                   replaced_by_id = ?
+             WHERE canonical_id = ? AND status = 'active' AND id <> ?";
+            cmdInactive.Parameters.Add(new DuckDBParameter { Value = targetId });
+            cmdInactive.Parameters.Add(new DuckDBParameter { Value = canonicalId });
+            cmdInactive.Parameters.Add(new DuckDBParameter { Value = targetId });
+            cmdInactive.ExecuteNonQuery();
+        }
+
+        // 3) Activate the target (no-op if already active)
+        using (var cmdActive = conn.CreateCommand())
+        {
+            cmdActive.Transaction = tx;
+            cmdActive.CommandText = @"
+            UPDATE questionnaire
+               SET status = 'active', updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?";
+            cmdActive.Parameters.Add(new DuckDBParameter { Value = targetId });
+            var updated = cmdActive.ExecuteNonQuery();
+            if (updated == 0)
+            {
+                tx.Rollback();
+                return NotFound("Target questionnaire not found.");
+            }
+        }
+
+        tx.Commit();
+        return NoContent();
+    }
 }
