@@ -1,106 +1,58 @@
-import { useMemo, useState, useCallback } from "react";
-import { Model as SurveyModel } from "survey-core";
+import { useMemo } from "react";
+import { useParams } from "react-router-dom";
 import { Survey } from "survey-react-ui";
+import { Model as SurveyModel } from "survey-core";
 import "survey-core/survey-core.css";
 
-// TODO: replace this with a fetch to your backend later
-const surveyJson = {
-  "title": "Woon-werk verkeer",
-  "logo": "https://surveyjs.io/Content/Images/examples/logo.png",
-  "logoHeight": "60px",
-  "completedHtml": "<h3>Thank you for your feedback</h3>",
-  "pages": [
-    {
-      "name": "page1",
-      "title": "Woon-werk verkeer",
-      "elements": [
-        {
-          "type": "rating",
-          "name": "dagen_naar_werk",
-          "title": "Hoevaak per week ga je naar werk",
-          "isRequired": true,
-          "rateCount": 8,
-          "rateMin": 0,
-          "rateMax": 7,
-          "maxRateDescription": "Dagen van de week"
-        },
-        {
-          "type": "checkbox",
-          "name": "vervoer",
-          "visibleIf": "{dagen_naar_werk} >= 1", // note: your previous 9 would never show
-          "title": "Welk vervoersmiddel gebruik je daarvoor?",
-          "isRequired": true,
-          "validators": [{ "type": "answercount", "maxCount": 3 }],
-          "choices": [
-            { "value": "public_transport", "text": "OV (trein, bus, metro)" },
-            { "value": "car", "text": "Auto" },
-            { "value": "scooter", "text": "Scooter / Brommer" },
-            { "value": "e-bike", "text": "Elektrische fiets" },
-            { "value": "bike", "text": "Fiets" },
-            { "value": "walk", "text": "Lopend" }
-          ],
-          "colCount": 2
-        },
-        {
-          "type": "text",
-          "name": "reis_tijd_totaal",
-          "title": "Hoelang is je reistijd (heen en terug opgeteld)",
-          "inputType": "time",
-          "min": "00:00",
-          "max": "23:59"
-        }
-      ]
-    }
-  ],
-  "headerView": "advanced"
-};
+import { useLatestQuestionnaire, useSubmitResponse } from "./queries";
 
 export default function QuestionnairePage() {
-  // If you want to load from backend: fetch JSON and pass into useMemo instead of surveyJson
-  const model = useMemo(() => new SurveyModel(surveyJson), []);
+  const { canonicalId = "7607e780-806f-48a3-b378-ccd2e1c502c7" } = useParams(); // e.g. /questionnaires/:canonicalId
 
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const {
+    data: dto,
+    isLoading,
+    error,
+  } = useLatestQuestionnaire(canonicalId);
 
-  const handleComplete = useCallback(async () => {
-    setSubmitting(true);
-    setSubmitError(null);
+  const submit = useSubmitResponse(dto?.id ?? "");
 
-    try {
-      // Replace with your real questionnaireId from backend
-      const questionnaireId = "00000000-0000-0000-0000-000000000000";
+  const model = useMemo(() => {
+    if (!dto) return null;
 
-      const payload = {
-        userId: null,
-        answers: model.data // key/value by question name
-      };
-
-      // POST to your API (match your ResponsesController route)
-      const res = await fetch(`/api/questionnaires/${questionnaireId}/responses`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `HTTP ${res.status}`);
+    let def: any = dto.definition;
+    if (typeof def === "string") {
+      try {
+        def = JSON.parse(def);
+      } catch {
+        /* leave as string if parse fails */
       }
-    } catch (e: any) {
-      setSubmitError(e.message ?? "Submit failed");
-    } finally {
-      setSubmitting(false);
     }
-  }, [model]);
 
-  // SurveyJS fires onComplete when the 'Complete' button is pressed
-  model.onComplete.add(handleComplete);
+    const m = new SurveyModel(def);
+    m.onComplete.add(async (s) => {
+      await submit.mutateAsync({
+        userId: null, // fill if you have auth
+        answers: s.data,
+      });
+    });
+    return m;
+  }, [dto, submit]);
+
+  if (isLoading) return <div className="p-6">Loading questionnaire…</div>;
+  if (error) return <div className="p-6 text-red-600">Failed to load questionnaire</div>;
+  if (!model) return <div className="p-6">No questionnaire definition</div>;
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <Survey model={model} />
-      {submitting && <p>Submitting…</p>}
-      {submitError && <p style={{ color: "red" }}>{submitError}</p>}
+      {submit.isPending && <p>Submitting…</p>}
+      {submit.isError && (
+        <p className="text-red-600">
+          {(submit.error as Error)?.message ?? "Submit failed"}
+        </p>
+      )}
+      {submit.isSuccess && <p className="text-green-600">Thanks! Response saved.</p>}
     </div>
   );
 }

@@ -12,7 +12,7 @@ export const router = createBrowserRouter([
       { index: true, element: <Home /> },
       { path: "items", element: <ItemsPage /> },
       { path: "questionnaires", element: <QuestionnairePage /> },
-
+      // { path: "/admin/questionnaires", element: <AdminQuestionnairesPage /> },
     ],
   },
 ]);
