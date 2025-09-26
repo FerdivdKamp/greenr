@@ -1,3 +1,4 @@
+
 # greenr
 
 
@@ -23,5 +24,16 @@ The mobile app will talk with the database through the backend.
 
 Uses react typescript and vite
 https://nodejs.org/en/download
+
+
+
+# Functional stuff
+
+## Creating questionnaires
+
+You can use this and save and edit the JSON locally
+https://surveyjs.io/try/reactjs#try-creator
+
+After that the backend has an endpoint to store the questionnaire in the database, or add a new version of it and publish it. Just check swagger
 
 

@@ -65,24 +65,47 @@ CREATE TABLE commutes (
 """)
 
 con.execute("""
-CREATE TABLE questions (
-    question_id UUID DEFAULT uuidv4() PRIMARY KEY,
-    question_text TEXT NOT NULL,
-    category TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE questionnaire (
+  id              UUID PRIMARY KEY,
+  canonical_id    UUID NOT NULL,                  -- stable ID across versions
+  version         INTEGER NOT NULL,               -- version number (1,2,3..)
+  title           TEXT NOT NULL,
+  definition_json TEXT NOT NULL,
+  status          TEXT NOT NULL,                  -- 'draft' | 'active' | 'inactive'
+  supersedes_id   UUID,                           -- points to previous version
+  replaced_by_id  UUID,                           -- points to next version
+  created_at      TIMESTAMP NOT NULL,             -- UTC
+  updated_at      TIMESTAMP NOT NULL,             -- UTC
+  UNIQUE (canonical_id, version)
 );
 """)
 
 con.execute("""
-CREATE TABLE answers (
-    answer_id UUID DEFAULT uuidv4(),
-    user_id UUID REFERENCES users(user_id),
-    question_id UUID REFERENCES questions(question_id),
-    answer_text TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE response (
+  id               UUID PRIMARY KEY,
+  questionnaire_id UUID NOT NULL REFERENCES questionnaire(id), -- ties to specific version
+  canonical_id     UUID NOT NULL,                              -- denormalized for grouping
+  user_id          TEXT,                                       -- or UUID if you have one
+  submitted_at     TIMESTAMP NOT NULL,                         -- UTC
+  definition_hash  TEXT,                                       -- hash of JSON definition
 );
+""")
+
+con.execute("""
+CREATE TABLE response_item (
+  id               UUID PRIMARY KEY,
+  response_id      UUID NOT NULL REFERENCES response(id),
+  question_id      TEXT NOT NULL,         -- matches JSON question "id"
+  answer_text      TEXT,
+  answer_numeric   DECIMAL(18,4),
+  answer_choice_id TEXT
+);
+""")
+
+con.execute("""
+CREATE INDEX idx_response_questionnaire ON response(questionnaire_id);
+CREATE INDEX idx_response_canonical ON response(canonical_id);
+CREATE INDEX idx_items_question ON response_item(question_id);
 """)
 
 print("DuckDB schema initialized.")
