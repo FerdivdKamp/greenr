@@ -1,11 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using CarbonTracker.API.Models;
 using DuckDB.NET.Data;
-using CarbonTracker.API.Models;
+using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace CarbonTracker.API.Controllers;
 
 [ApiController]
 [Route("api/items")]
+
 public class ItemsController : ControllerBase
 {
     private readonly IConfiguration _configuration;
@@ -24,6 +26,11 @@ public class ItemsController : ControllerBase
     }
 
     [HttpGet]
+    [SwaggerOperation(
+        Summary = "Returns all items",
+        Description = "Returns the items in the items table. TODO For current user."
+        )
+    ]
     public IActionResult Get()
     {
         var items = new List<Item>();
@@ -58,6 +65,11 @@ public class ItemsController : ControllerBase
     }
 
     [HttpPost]
+    [SwaggerOperation(
+        Summary = "Add item to the items table",
+        Description = "Add item to the items table. TODO Make it user aware."
+        )
+    ]
     public IActionResult AddItem([FromBody] Item item)
     {
         if (item == null)
@@ -81,6 +93,11 @@ public class ItemsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [SwaggerOperation(
+        Summary = "Update an existing item",
+        Description = "Update an existing item in the items table. TODO Make it user aware."
+        )
+    ]
     public IActionResult UpdateItem(Guid id, [FromBody] Item item)
     {
         if (item == null)

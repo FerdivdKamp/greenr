@@ -33,7 +33,11 @@ public class QuestionnaireController : ControllerBase
     // (List all questionnaires - return full DTOs incl. definition_json)
     // --------------------------------------------------------------------
     [HttpGet]
-    //[HttpGet("/api/questionnaire")] // optional: keep old singular route working
+    [SwaggerOperation(
+        Summary = "Returns all questionnaires",
+        Description = "Returns a list of all questionnaires in the system"
+        )
+    ]
     public IActionResult GetAll()
     {
         var list = new List<QuestionnaireDto>();
@@ -75,7 +79,11 @@ public class QuestionnaireController : ControllerBase
     // GET: /api/questionnaires/{id}
     // --------------------------------------------------------------------
     [HttpGet("{id:guid}")]
-    //[HttpGet("/api/questionnaire/{id:guid}")] // optional: old route
+    [SwaggerOperation(
+        Summary = "Returns specific questionnaire",
+        Description = "Returns the questionnaire with the matching id"
+        )
+    ]
     public IActionResult GetById(Guid id)
     {
         using var conn = CreateConnection();
@@ -107,9 +115,13 @@ public class QuestionnaireController : ControllerBase
 
     // --------------------------------------------------------------------
     // GET: /api/questionnaires/{canonicalId}/latest
-    // Returns the latest *active* version in a questionnaire family
     // --------------------------------------------------------------------
     [HttpGet("{canonicalId:guid}/latest")]
+    [SwaggerOperation(
+        Summary = "Returns the latest *active* version in a questionnaire family (canonicalId)",
+        Description = "Returns the latest version of a canonical."
+        )
+    ]
     public IActionResult GetLatest(Guid canonicalId)
     {
         using var conn = CreateConnection();
@@ -262,6 +274,11 @@ public class QuestionnaireController : ControllerBase
     // Sets this row to 'active' and inactivates prior active in the same family
     // --------------------------------------------------------------------
     [HttpPost("{id:guid}/publish")]
+    [SwaggerOperation(
+        Summary = "Publish questionnaire version by id",
+        Description = "Activate a version by id. Inactivates the previous active version and sets its replaced_by_id = target."
+        )
+    ]
     public IActionResult Publish(Guid id)
     {
         using var conn = CreateConnection();
