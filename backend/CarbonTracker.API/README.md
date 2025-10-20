@@ -46,6 +46,8 @@ CarbonTracker.API/ # Main Web API project
 ```
 
 ### Contracts
+
+Determine dat models for external communication (API)
 Contracts holds Data Transfer Objects (DTOs) that define the shape of data exchanged between the client and server. 
 They are designed to be lightweight and focused on the data needed for API interactions, without exposing internal implementation details.
 
@@ -65,3 +67,8 @@ Clearly define what each API can send and receive,
 Protect sensitive data by never exposing it outside the intended scope,
 
 And decouple your internal database schema from your public API contracts, so database changes don’t automatically break client integrations.
+
+### Models
+Determine data models for internal use (DB)
+Models represent the internal data structures that map directly to the database tables. They include all the fields and properties needed for data storage, retrieval, and manipulation within the application.
+

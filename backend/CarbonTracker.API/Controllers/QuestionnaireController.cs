@@ -4,7 +4,9 @@ using DuckDB.NET.Data;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Swashbuckle.AspNetCore.Filters;
+using System.Text;
 using System.Text.Json;
+using System.Security.Cryptography;
 
 namespace CarbonTracker.API.Controllers;
 
@@ -439,5 +441,128 @@ public class QuestionnaireController : ControllerBase
 
         tx.Commit();
         return NoContent();
+    }
+
+    [HttpPost("{questionnaireId:guid}/responses")]
+    [SwaggerOperation(Summary = "post response to questionnaire",
+    Description = "Post a response, TODO figure out what is expected and match that.")]
+    public IActionResult SubmitResponse(Guid questionnaireId, [FromBody] SubmitResponseRequest request)
+    {
+        // {
+           //"userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+           //"answers": { "dagen_naar_werk": 1, "vervoer": ["public_transport"], "reis_tijd_totaal": "00:30"}
+        //}
+
+        if (request.Answers.ValueKind != JsonValueKind.Object)
+            return BadRequest("`answers` must be a JSON object.");
+
+        using var conn = CreateConnection();
+        using var tx = conn.BeginTransaction();
+
+        // 1) Load canonical_id and definition to compute hash (adjust column names if different)
+        Guid canonicalId;
+        string? definitionJson;
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.Transaction = tx;
+            cmd.CommandText = "SELECT canonical_id, definition FROM questionnaire WHERE id = ?";
+            cmd.Parameters.Add(new DuckDBParameter { Value = questionnaireId });
+
+            using var rdr = cmd.ExecuteReader();
+            if (!rdr.Read())
+            {
+                tx.Rollback();
+                return NotFound($"Questionnaire {questionnaireId} not found.");
+            }
+
+            canonicalId = Guid.Parse(rdr.GetValue(0)!.ToString()!);
+            definitionJson = rdr.IsDBNull(1) ? null : rdr.GetString(1);
+        }
+
+        // 2) Compute a stable hash of the active definition (or empty if not available)
+        var definitionHash = ComputeSha256(definitionJson ?? string.Empty);
+
+        // 3) Insert into response
+        var responseId = Guid.NewGuid();
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.Transaction = tx;
+            cmd.CommandText = @"
+            INSERT INTO response (id, questionnaire_id, canonical_id, user_id, submitted_at, definition_hash)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)";
+            cmd.Parameters.Add(new DuckDBParameter { Value = responseId });
+            cmd.Parameters.Add(new DuckDBParameter { Value = questionnaireId });
+            cmd.Parameters.Add(new DuckDBParameter { Value = canonicalId });
+
+            // If your DB column is nullable, pass DBNull when UserId is null.
+            // If NOT nullable, consider using Guid.Empty or make the column nullable.
+            cmd.Parameters.Add(new DuckDBParameter { Value = (object?)request.UserId ?? DBNull.Value });
+            cmd.Parameters.Add(new DuckDBParameter { Value = definitionHash });
+
+            cmd.ExecuteNonQuery();
+        }
+
+        // 4) Insert each answer into response_item
+        using (var insertItem = conn.CreateCommand())
+        {
+            insertItem.Transaction = tx;
+            insertItem.CommandText = @"
+            INSERT INTO response_item (id, response_id, question_id, answer_text, answer_numeric, answer_choice_id)
+            VALUES (?, ?, ?, ?, ?, ?)";
+            var pId = insertItem.Parameters.Add(new DuckDBParameter());
+            var pRespId = insertItem.Parameters.Add(new DuckDBParameter());
+            var pQ = insertItem.Parameters.Add(new DuckDBParameter());
+            var pText = insertItem.Parameters.Add(new DuckDBParameter());
+            var pNum = insertItem.Parameters.Add(new DuckDBParameter());
+            var pChoice = insertItem.Parameters.Add(new DuckDBParameter());
+
+            foreach (var prop in request.Answers.EnumerateObject())
+            {
+                var (text, num, choice) = ToAnswerColumns(prop.Value);
+
+                var questionId = prop.Name;
+                var value = prop.Value;
+
+                insertItem.ExecuteNonQuery();
+            }
+        }
+
+        tx.Commit();
+
+        // 201 Created with { id } payload as your frontend expects
+        return Created($"/api/questionnaires/{questionnaireId}/responses/{responseId}", new { id = responseId });
+
+        // === local helpers ===
+        static string ComputeSha256(string s)
+        {
+            using var sha = SHA256.Create();
+            var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(s));
+            return Convert.ToHexString(bytes); // uppercase hex
+        }
+
+        static (string? text, decimal? num, string? choiceId) ToAnswerColumns(JsonElement value)
+        {
+            // Heuristics:
+            // - number -> answer_numeric
+            // - string -> answer_text (and maybe treat as choiceId if you later need it)
+            // - bool -> "true"/"false" in answer_text
+            // - array/object -> store compact JSON in answer_text
+            switch (value.ValueKind)
+            {
+                case JsonValueKind.Number:
+                    if (value.TryGetDecimal(out var d)) return (null, d, null);
+                    return (value.GetRawText(), null, null); // fallback to text if it’s too big
+                case JsonValueKind.String:
+                    var s = value.GetString();
+                    return (s, null, null);
+                case JsonValueKind.True:
+                case JsonValueKind.False:
+                    return (value.GetBoolean().ToString(), null, null);
+                default:
+                    // arrays/objects/null -> keep raw JSON so nothing is lost
+                    return (value.GetRawText(), null, null);
+            }
+        }
     }
 }
