@@ -6,6 +6,8 @@ To run the backend, when this is running you can start the mobile app (see the m
 dotnet run
 ```
 
+Or just hit F5 in Visual Studio to start debugging, as running in terminal will not allow you to set breakpoints.
+
 
 ### Swagger
 
