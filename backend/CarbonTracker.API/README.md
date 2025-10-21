@@ -6,6 +6,8 @@ To run the backend, when this is running you can start the mobile app (see the m
 dotnet run
 ```
 
+Or just hit F5 in Visual Studio to start debugging, as running in terminal will not allow you to set breakpoints.
+
 
 ### Swagger
 
@@ -44,3 +46,31 @@ CarbonTracker.API/ # Main Web API project
 ├── bin/ # Build output binaries
 └── obj/ # Build artifacts (intermediate)
 ```
+
+### Contracts
+
+Determine dat models for external communication (API)
+Contracts holds Data Transfer Objects (DTOs) that define the shape of data exchanged between the client and server. 
+They are designed to be lightweight and focused on the data needed for API interactions, without exposing internal implementation details.
+
+e.g. you can 
+In this use case, the DTO (Data Transfer Object) represents a subset of the database table that’s exposed through the API.
+
+The table itself might have 10 columns, but the DTO only includes 4 of them — the ones that are relevant and safe to send or receive via the API. The remaining 6 columns stay internal to the database layer and are not part of the DTO, so they can’t be modified or even seen through that API call.
+
+You’d typically have different DTOs (contracts) for each context or endpoint — for example:
+Admin DTOs might include all 10 columns, since admins are allowed to view or modify everything.
+User DTOs might only include 4–5 of those columns, omitting sensitive or system-managed fields.
+
+This approach lets you:
+
+Clearly define what each API can send and receive,
+
+Protect sensitive data by never exposing it outside the intended scope,
+
+And decouple your internal database schema from your public API contracts, so database changes don’t automatically break client integrations.
+
+### Models
+Determine data models for internal use (DB)
+Models represent the internal data structures that map directly to the database tables. They include all the fields and properties needed for data storage, retrieval, and manipulation within the application.
+

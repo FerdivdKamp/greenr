@@ -95,4 +95,20 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     datetime.now()
 ))
 
+con.execute("""
+INSERT INTO questionnaire (id, canonical_id, title, version, status, definition_json, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+""", (
+  '7607e780-806f-48a3-b378-ccd2e1c502c7',
+  '7607e780-806f-48a3-b378-ccd2e1c502c7',
+  'Woon-werk verkeer',
+  1,
+  'active',
+  '{"title":"Woon-werk verkeer","pages":[{"name":"page1","title":"Woon-werk verkeer","elements":[{"type":"rating","name":"dagen_naar_werk","rateMin":0,"rateMax":7,"isRequired":true},{"type":"checkbox","name":"vervoer","choices":[{"value":"public_transport","text":"OV"},{"value":"car","text":"Auto"},{"value":"bike","text":"Fiets"}],"validators":[{"type":"answercount","maxCount":3}]},{"type":"text","name":"reis_tijd_totaal","inputType":"time"}]}]}',
+  datetime.now(),
+  datetime.now()
+
+))
+
+
 print("User inserted with user_id:", user_id)

@@ -8,5 +8,7 @@
         public Guid UserId { get; set; }
         public DateTime SubmittedAt { get; set; }
         public string DefinitionHash { get; set; } = "";
+        public string AnswersJson { get; set; } = "";
+
     }
 }
