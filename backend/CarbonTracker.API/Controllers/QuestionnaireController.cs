@@ -466,7 +466,7 @@ public class QuestionnaireController : ControllerBase
         using (var cmd = conn.CreateCommand())
         {
             cmd.Transaction = tx;
-            cmd.CommandText = "SELECT canonical_id, definition FROM questionnaire WHERE id = ?";
+            cmd.CommandText = "SELECT canonical_id, definition_json FROM questionnaire WHERE id = ?";
             cmd.Parameters.Add(new DuckDBParameter { Value = questionnaireId });
 
             using var rdr = cmd.ExecuteReader();
@@ -485,20 +485,21 @@ public class QuestionnaireController : ControllerBase
 
         // 3) Insert into response
         var responseId = Guid.NewGuid();
+        var answersRaw = request.Answers.GetRawText();
+
         using (var cmd = conn.CreateCommand())
         {
             cmd.Transaction = tx;
             cmd.CommandText = @"
-            INSERT INTO response (id, questionnaire_id, canonical_id, user_id, submitted_at, definition_hash)
-            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)";
+            INSERT INTO response (id, questionnaire_id, canonical_id, user_id, submitted_at, definition_hash, answers_json)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?,?)";
             cmd.Parameters.Add(new DuckDBParameter { Value = responseId });
             cmd.Parameters.Add(new DuckDBParameter { Value = questionnaireId });
             cmd.Parameters.Add(new DuckDBParameter { Value = canonicalId });
-
-            // If your DB column is nullable, pass DBNull when UserId is null.
-            // If NOT nullable, consider using Guid.Empty or make the column nullable.
             cmd.Parameters.Add(new DuckDBParameter { Value = (object?)request.UserId ?? DBNull.Value });
+
             cmd.Parameters.Add(new DuckDBParameter { Value = definitionHash });
+            cmd.Parameters.Add(new DuckDBParameter { Value = answersRaw });
 
             cmd.ExecuteNonQuery();
         }
@@ -510,22 +511,23 @@ public class QuestionnaireController : ControllerBase
             insertItem.CommandText = @"
             INSERT INTO response_item (id, response_id, question_id, answer_text, answer_numeric, answer_choice_id)
             VALUES (?, ?, ?, ?, ?, ?)";
-            var pId = insertItem.Parameters.Add(new DuckDBParameter());
-            var pRespId = insertItem.Parameters.Add(new DuckDBParameter());
-            var pQ = insertItem.Parameters.Add(new DuckDBParameter());
-            var pText = insertItem.Parameters.Add(new DuckDBParameter());
-            var pNum = insertItem.Parameters.Add(new DuckDBParameter());
-            var pChoice = insertItem.Parameters.Add(new DuckDBParameter());
 
             foreach (var prop in request.Answers.EnumerateObject())
             {
                 var (text, num, choice) = ToAnswerColumns(prop.Value);
 
-                var questionId = prop.Name;
-                var value = prop.Value;
+                insertItem.Parameters.Clear(); // clear previous loop values
+
+                insertItem.Parameters.Add(new DuckDBParameter { Value = Guid.NewGuid() }); // id
+                insertItem.Parameters.Add(new DuckDBParameter { Value = responseId });     // response_id
+                insertItem.Parameters.Add(new DuckDBParameter { Value = prop.Name });      // question_id
+                insertItem.Parameters.Add(new DuckDBParameter { Value = (object?)text ?? DBNull.Value });
+                insertItem.Parameters.Add(new DuckDBParameter { Value = (object?)num ?? DBNull.Value });
+                insertItem.Parameters.Add(new DuckDBParameter { Value = (object?)choice ?? DBNull.Value });
 
                 insertItem.ExecuteNonQuery();
             }
+
         }
 
         tx.Commit();
