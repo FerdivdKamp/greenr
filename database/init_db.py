@@ -85,9 +85,10 @@ CREATE TABLE response (
   id               UUID PRIMARY KEY,
   questionnaire_id UUID NOT NULL REFERENCES questionnaire(id), -- ties to specific version
   canonical_id     UUID NOT NULL,                              -- denormalized for grouping
-  user_id          TEXT,                                       -- or UUID if you have one
+  user_id          UUID,                                       -- or UUID if you have one
   submitted_at     TIMESTAMP NOT NULL,                         -- UTC
   definition_hash  TEXT,                                       -- hash of JSON definition
+  answers_json     TEXT NOT NULL                               -- JSON blob of answers
 );
 """)
 
@@ -109,3 +110,4 @@ CREATE INDEX idx_items_question ON response_item(question_id);
 """)
 
 print("DuckDB schema initialized.")
+
