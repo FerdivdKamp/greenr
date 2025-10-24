@@ -18,6 +18,7 @@ con = duckdb.connect("carbon_tracker.duckdb")
 con.execute("""
 CREATE TABLE users (
     user_id UUID DEFAULT uuidv4() PRIMARY KEY,
+    user_name TEXT UNIQUE NOT NULL CHECK (LENGTH(user_name) <= 20),
     email TEXT UNIQUE NOT NULL,
     first_name TEXT CHECK (LENGTH(first_name) <= 20),
     password_hash TEXT NOT NULL,
@@ -37,6 +38,7 @@ CREATE TABLE houses (
 );
 """)
 
+# Table for items so we can plot value and carbon footprint over time
 con.execute("""
 CREATE TABLE items (
     item_id UUID DEFAULT uuidv4(),
@@ -51,6 +53,7 @@ CREATE TABLE items (
 );
 """)
 
+
 con.execute("""
 CREATE TABLE commutes (
     commute_id UUID DEFAULT uuidv4(),
@@ -63,6 +66,7 @@ CREATE TABLE commutes (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 """)
+
 
 con.execute("""
 CREATE TABLE questionnaire (
@@ -108,6 +112,35 @@ CREATE INDEX idx_response_questionnaire ON response(questionnaire_id);
 CREATE INDEX idx_response_canonical ON response(canonical_id);
 CREATE INDEX idx_items_question ON response_item(question_id);
 """)
+
+
+# For password reset tokens when the user forgets their password
+con.execute("""
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  token TEXT PRIMARY KEY,            -- random string
+  user_id UUID NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  used_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(user_id) REFERENCES users(user_id)
+);
+""")
+
+
+# For refresh tokens when the user wants to stay logged in when the access token expires without re-entering credentials
+con.execute("""
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  token TEXT PRIMARY KEY,
+  user_id UUID NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  revoked_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(user_id) REFERENCES users(user_id)
+);
+""")
+
+
+
 
 print("DuckDB schema initialized.")
 
