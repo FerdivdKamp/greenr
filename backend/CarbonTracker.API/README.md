@@ -74,11 +74,15 @@ And decouple your internal database schema from your public API contracts, so da
 Determine data models for internal use (DB)
 Models represent the internal data structures that map directly to the database tables. They include all the fields and properties needed for data storage, retrieval, and manipulation within the application.
 
+### Controllers
+Controllers handle incoming HTTP requests, process them, and return appropriate responses. They define the API endpoints and the logic for handling various operations such as creating, reading, updating, and deleting resources.
 
 ### Configuration / Appsettings.json
 Basic configuration file for the backend application. It typically contains settings such as database connection strings, logging configurations, and other application-specific settings.
 You can create environent specific versions of this file, e.g. appsettings.Development.json or appsettings.Production.json to override settings based on the environment the application is running in.
 
+### Services
+Services contain the business logic of the application. They interact with the data models and perform operations such as data validation, processing, and communication with external systems or databases.
 
 ### Authentication
 Becrypt is used to hash user passwords before storing them in the database. This ensures that even if the database is compromised, the actual passwords remain secure.

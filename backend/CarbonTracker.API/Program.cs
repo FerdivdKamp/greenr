@@ -1,11 +1,12 @@
+using CarbonTracker.API.Services;
+using DuckDB.NET.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Filters;
-using DuckDB.NET.Data;
+using System.Data;
 using System.Reflection;
 using System.Text;
-using System.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,6 +46,9 @@ builder.Services.AddScoped<IDbConnection>(_ =>
     conn.Open();
     return conn;
 });
+
+builder.Services.AddScoped<IUsersService, UsersService>();
+builder.Services.AddSingleton<ITokenService, TokenService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
