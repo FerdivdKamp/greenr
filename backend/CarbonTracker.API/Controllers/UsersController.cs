@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using System.Data;                    // For IDbConnection
+using System.Data;
 using CarbonTracker.API.Models;
 using Swashbuckle.AspNetCore.Annotations;
 
