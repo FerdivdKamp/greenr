@@ -74,3 +74,12 @@ And decouple your internal database schema from your public API contracts, so da
 Determine data models for internal use (DB)
 Models represent the internal data structures that map directly to the database tables. They include all the fields and properties needed for data storage, retrieval, and manipulation within the application.
 
+
+### Configuration / Appsettings.json
+Basic configuration file for the backend application. It typically contains settings such as database connection strings, logging configurations, and other application-specific settings.
+You can create environent specific versions of this file, e.g. appsettings.Development.json or appsettings.Production.json to override settings based on the environment the application is running in.
+
+
+### Authentication
+Becrypt is used to hash user passwords before storing them in the database. This ensures that even if the database is compromised, the actual passwords remain secure.
+jwt (JSON Web Tokens) are used for authenticating users and securing API endpoints. When a user logs in successfully, the server generates a JWT that the client must include in the Authorization header of subsequent requests to access protected resources.
