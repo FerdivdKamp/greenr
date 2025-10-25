@@ -83,3 +83,30 @@ You can create environent specific versions of this file, e.g. appsettings.Devel
 ### Authentication
 Becrypt is used to hash user passwords before storing them in the database. This ensures that even if the database is compromised, the actual passwords remain secure.
 jwt (JSON Web Tokens) are used for authenticating users and securing API endpoints. When a user logs in successfully, the server generates a JWT that the client must include in the Authorization header of subsequent requests to access protected resources.
+
+
+
+### Database interaction
+
+We create a connection (centrally in Program.cs) to the DuckDB database file using the connection string defined in appsettings.json.)
+This connection is then injected into the controllers via dependency injection, allowing them to execute SQL queries against the database as needed.
+
+So for a single database operation, the steps are:
+1. Create connection 
+1. Create Command
+1. Add SQL to command
+1. Add parameters to command (if any)
+1. Excute command (ExecuteReader, ExecuteNonQuery, etc)
+
+1. For a transaction, you would also:
+1. Create connection
+1. Begin transaction
+1. Create Command
+1. Add transaction to command (so it knows to use that transaction)
+1. Add SQL to command
+1. Add parameters to command (if any)
+1. Excute command (ExecuteReader, ExecuteNonQuery, etc)
+1. Commit transaction (or rollback on error)
+
+
+
