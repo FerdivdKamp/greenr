@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using System.Data;
 using CarbonTracker.API.Models;
 using Swashbuckle.AspNetCore.Annotations;
+using System.Data;
 
 namespace CarbonTracker.API.Controllers;
 

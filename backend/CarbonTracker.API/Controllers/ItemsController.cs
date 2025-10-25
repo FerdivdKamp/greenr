@@ -1,4 +1,5 @@
 ﻿using CarbonTracker.API.Models;
+using System.Data;
 using DuckDB.NET.Data;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -7,22 +8,15 @@ namespace CarbonTracker.API.Controllers;
 
 [ApiController]
 [Route("api/items")]
+[SwaggerTag("Operations related to items")]
 
 public class ItemsController : ControllerBase
 {
-    private readonly IConfiguration _configuration;
+    private readonly IDbConnection _db;
 
-    public ItemsController(IConfiguration configuration)
+    public ItemsController(IDbConnection db)
     {
-        _configuration = configuration;
-    }
-
-    private DuckDBConnection CreateConnection()
-    {
-        var connectionString = _configuration.GetConnectionString("DuckDb");
-        var conn = new DuckDBConnection(connectionString);
-        conn.Open();
-        return conn;
+        _db = db;
     }
 
     [HttpGet]
@@ -34,8 +28,7 @@ public class ItemsController : ControllerBase
     public IActionResult Get()
     {
         var items = new List<Item>();
-        using var conn = CreateConnection();
-        using var cmd = conn.CreateCommand();
+        using var cmd = _db.CreateCommand();
         cmd.CommandText = "SELECT item_id, item_name, use_case, price, footprint_kg, date_of_purchase FROM items";
         using var reader = cmd.ExecuteReader();
 
@@ -75,8 +68,7 @@ public class ItemsController : ControllerBase
         if (item == null)
             return BadRequest();
 
-        using var conn = CreateConnection();
-        using var cmd = conn.CreateCommand();
+        using var cmd = _db.CreateCommand();
         cmd.CommandText = @"INSERT INTO items (item_id, item_name, use_case, price, footprint_kg, date_of_purchase)
                             VALUES (?, ?, ?, ?, ?, ?)";
         var itemId = item.ItemId == Guid.Empty ? Guid.NewGuid() : item.ItemId;
@@ -98,13 +90,14 @@ public class ItemsController : ControllerBase
         Description = "Update an existing item in the items table. TODO Make it user aware."
         )
     ]
+    [SwaggerResponse(200, "Item updated", typeof(Item))]
+    [SwaggerResponse(404, "Item not found", typeof(Item))]
     public IActionResult UpdateItem(Guid id, [FromBody] Item item)
     {
         if (item == null)
             return BadRequest();
 
-        using var conn = CreateConnection();
-        using var cmd = conn.CreateCommand();
+        using var cmd = _db.CreateCommand();
         cmd.CommandText = @"UPDATE items SET item_name = ?, use_case = ?, price = ?, footprint_kg = ?, date_of_purchase = ?
                         WHERE item_id = ?";
 

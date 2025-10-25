@@ -4,9 +4,10 @@ using DuckDB.NET.Data;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Swashbuckle.AspNetCore.Filters;
+using System.Security.Cryptography;
+using System.Data;
 using System.Text;
 using System.Text.Json;
-using System.Security.Cryptography;
 
 namespace CarbonTracker.API.Controllers;
 
@@ -15,19 +16,11 @@ namespace CarbonTracker.API.Controllers;
 
 public class QuestionnaireController : ControllerBase
 {
-    private readonly IConfiguration _configuration;
+    private readonly IDbConnection _db;
 
-    public QuestionnaireController(IConfiguration configuration)
+    public QuestionnaireController(IDbConnection db)
     {
-        _configuration = configuration;
-    }
-
-    private DuckDBConnection CreateConnection()
-    {
-        var connectionString = _configuration.GetConnectionString("DuckDb");
-        var conn = new DuckDBConnection(connectionString);
-        conn.Open();
-        return conn;
+        _db = db;
     }
 
     // --------------------------------------------------------------------
@@ -43,8 +36,7 @@ public class QuestionnaireController : ControllerBase
     public IActionResult GetAll()
     {
         var list = new List<QuestionnaireDto>();
-        using var conn = CreateConnection();
-        using var cmd = conn.CreateCommand();
+        using var cmd = _db.CreateCommand();
         cmd.CommandText = @"
             SELECT id, canonical_id, version, title, status, created_at, updated_at, definition_json
             FROM questionnaire
@@ -88,8 +80,7 @@ public class QuestionnaireController : ControllerBase
     ]
     public IActionResult GetById(Guid id)
     {
-        using var conn = CreateConnection();
-        using var cmd = conn.CreateCommand();
+        using var cmd = _db.CreateCommand();
         cmd.CommandText = @"
             SELECT id, canonical_id, version, title, status, created_at, updated_at, definition_json
             FROM questionnaire
@@ -126,8 +117,7 @@ public class QuestionnaireController : ControllerBase
     ]
     public IActionResult GetLatest(Guid canonicalId)
     {
-        using var conn = CreateConnection();
-        using var cmd = conn.CreateCommand();
+        using var cmd = _db.CreateCommand();
         cmd.CommandText = @"
             SELECT id, canonical_id, version, title, status, created_at, updated_at, definition_json
             FROM questionnaire
@@ -176,8 +166,7 @@ public class QuestionnaireController : ControllerBase
             _ => dto.Definition.GetRawText()
         };
 
-        using var conn = CreateConnection();
-        using var tx = conn.BeginTransaction();
+        using var tx = _db.BeginTransaction();
 
         // 1) Resolve canonical_id and version
         Guid canonicalId;
@@ -185,7 +174,7 @@ public class QuestionnaireController : ControllerBase
 
         if (dto.SupersedesId.HasValue)
         {
-            using var cmdPrev = conn.CreateCommand();
+            using var cmdPrev = _db.CreateCommand();
             cmdPrev.Transaction = tx;
             cmdPrev.CommandText = "SELECT canonical_id, version FROM questionnaire WHERE id = ?";
             cmdPrev.Parameters.Add(new DuckDBParameter { Value = dto.SupersedesId.Value });
@@ -209,7 +198,7 @@ public class QuestionnaireController : ControllerBase
         else
         {
             canonicalId = dto.CanonicalId ?? Guid.NewGuid();
-            using var cmdVer = conn.CreateCommand();
+            using var cmdVer = _db.CreateCommand();
             cmdVer.Transaction = tx;
             cmdVer.CommandText = "SELECT COALESCE(MAX(version), 0) FROM questionnaire WHERE canonical_id = ?";
             cmdVer.Parameters.Add(new DuckDBParameter { Value = canonicalId });
@@ -221,7 +210,7 @@ public class QuestionnaireController : ControllerBase
         var id = Guid.NewGuid();
         var status = string.IsNullOrWhiteSpace(dto.Status) ? "draft" : dto.Status!.Trim();
 
-        using (var cmdIns = conn.CreateCommand())
+        using (var cmdIns = _db.CreateCommand())
         {
             cmdIns.Transaction = tx;
             cmdIns.CommandText = @"
@@ -242,7 +231,7 @@ public class QuestionnaireController : ControllerBase
         // 3) If superseding, mark previous row
         if (dto.SupersedesId.HasValue)
         {
-            using var cmdUpdPrev = conn.CreateCommand();
+            using var cmdUpdPrev = _db.CreateCommand();
             cmdUpdPrev.Transaction = tx;
             cmdUpdPrev.CommandText = @"
                 UPDATE questionnaire
@@ -283,12 +272,11 @@ public class QuestionnaireController : ControllerBase
     ]
     public IActionResult Publish(Guid id)
     {
-        using var conn = CreateConnection();
-        using var tx = conn.BeginTransaction();
+        using var tx = _db.BeginTransaction();
 
         // Find canonical of this row
         Guid canonicalId;
-        using (var cmd = conn.CreateCommand())
+        using (var cmd = _db.CreateCommand())
         {
             cmd.Transaction = tx;
             cmd.CommandText = "SELECT canonical_id FROM questionnaire WHERE id = ?";
@@ -302,7 +290,7 @@ public class QuestionnaireController : ControllerBase
         }
 
         // Inactivate any currently active in this family
-        using (var cmdInactive = conn.CreateCommand())
+        using (var cmdInactive = _db.CreateCommand())
         {
             cmdInactive.Transaction = tx;
             cmdInactive.CommandText = @"
@@ -316,7 +304,7 @@ public class QuestionnaireController : ControllerBase
         }
 
         // Activate the target row
-        using (var cmdActive = conn.CreateCommand())
+        using (var cmdActive = _db.CreateCommand())
         {
             cmdActive.Transaction = tx;
             cmdActive.CommandText = @"
@@ -346,15 +334,14 @@ public class QuestionnaireController : ControllerBase
 
     public IActionResult PublishByCanonical(Guid canonicalId, [FromBody] PublishByCanonicalRequest body)
     {
-        using var conn = CreateConnection();
-        using var tx = conn.BeginTransaction();
+        using var tx = _db.BeginTransaction();
 
         // 1) Resolve the target version id within the family
         Guid targetId;
 
         if (body.TargetId.HasValue)
         {
-            using var check = conn.CreateCommand();
+            using var check = _db.CreateCommand();
             check.Transaction = tx;
             check.CommandText = "SELECT 1 FROM questionnaire WHERE id = ? AND canonical_id = ?";
             check.Parameters.Add(new DuckDBParameter { Value = body.TargetId.Value });
@@ -369,7 +356,7 @@ public class QuestionnaireController : ControllerBase
         }
         else if (body.TargetVersion.HasValue)
         {
-            using var getByVersion = conn.CreateCommand();
+            using var getByVersion = _db.CreateCommand();
             getByVersion.Transaction = tx;
             getByVersion.CommandText = "SELECT id FROM questionnaire WHERE canonical_id = ? AND version = ?";
             getByVersion.Parameters.Add(new DuckDBParameter { Value = canonicalId });
@@ -384,7 +371,7 @@ public class QuestionnaireController : ControllerBase
         }
         else if (body.Latest)
         {
-            using var getLatest = conn.CreateCommand();
+            using var getLatest = _db.CreateCommand();
             getLatest.Transaction = tx;
             getLatest.CommandText = @"
             SELECT id FROM questionnaire
@@ -407,7 +394,7 @@ public class QuestionnaireController : ControllerBase
         }
 
         // 2) Inactivate any currently active in this family and link it to the target
-        using (var cmdInactive = conn.CreateCommand())
+        using (var cmdInactive = _db.CreateCommand())
         {
             cmdInactive.Transaction = tx;
             cmdInactive.CommandText = @"
@@ -423,7 +410,7 @@ public class QuestionnaireController : ControllerBase
         }
 
         // 3) Activate the target (no-op if already active)
-        using (var cmdActive = conn.CreateCommand())
+        using (var cmdActive = _db.CreateCommand())
         {
             cmdActive.Transaction = tx;
             cmdActive.CommandText = @"
@@ -456,14 +443,13 @@ public class QuestionnaireController : ControllerBase
         if (request.Answers.ValueKind != JsonValueKind.Object)
             return BadRequest("`answers` must be a JSON object.");
 
-        using var conn = CreateConnection();
-        using var tx = conn.BeginTransaction();
+        using var tx = _db.BeginTransaction();
 
         // 1) Load canonical_id and definition to compute hash (adjust column names if different)
         Guid canonicalId;
         string? definitionJson;
 
-        using (var cmd = conn.CreateCommand())
+        using (var cmd = _db.CreateCommand())
         {
             cmd.Transaction = tx;
             cmd.CommandText = "SELECT canonical_id, definition_json FROM questionnaire WHERE id = ?";
@@ -487,7 +473,7 @@ public class QuestionnaireController : ControllerBase
         var responseId = Guid.NewGuid();
         var answersRaw = request.Answers.GetRawText();
 
-        using (var cmd = conn.CreateCommand())
+        using (var cmd = _db.CreateCommand())
         {
             cmd.Transaction = tx;
             cmd.CommandText = @"
@@ -505,7 +491,7 @@ public class QuestionnaireController : ControllerBase
         }
 
         // 4) Insert each answer into response_item
-        using (var insertItem = conn.CreateCommand())
+        using (var insertItem = _db.CreateCommand())
         {
             insertItem.Transaction = tx;
             insertItem.CommandText = @"
