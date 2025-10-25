@@ -29,7 +29,7 @@ public class UsersController : ControllerBase
         var users = new List<User>();
 
         using var cmd = _db.CreateCommand();
-        cmd.CommandText = "SELECT user_id, email, first_name FROM users";
+        cmd.CommandText = "SELECT user_id, email, user_name FROM users";
 
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
@@ -38,7 +38,7 @@ public class UsersController : ControllerBase
             {
                 UserId = reader.GetGuid(0),
                 Email = reader.GetString(1),
-                FirstName = reader.GetString(2)
+                UserName = reader.GetString(2)
             });
         }
 
