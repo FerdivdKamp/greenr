@@ -114,3 +114,11 @@ So for a single database operation, the steps are:
 
 
 
+### Dependency Ingections
+
+The backend uses Dependency Injection (DI) to manage the creation and lifetime of various services and components. This allows for better separation of concerns, easier testing, and more maintainable code.
+
+Lifetimes: 
+- Transient: A new instance is created each time it is requested. Suitable for lightweight, stateless services.
+- Scoped: A single instance is created per request. Useful for services that need to maintain state within a request but not across requests.
+- Singleton: A single instance is created and shared throughout the application's lifetime. Ideal for services that maintain global state or configuration.
