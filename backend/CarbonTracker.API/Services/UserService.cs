@@ -73,9 +73,9 @@ public class UsersService : IUsersService
     public async Task<(Guid UserId, string Username)?> FindByIdentifierAsync(string identifier)
     {
         using var cmd = _db.CreateCommand();
-        cmd.CommandText = @"SELECT user_id, username
+        cmd.CommandText = @"SELECT user_id, user_name
                             FROM users
-                            WHERE lower(username)=lower(?) OR lower(email)=lower(?)
+                            WHERE lower(user_name)=lower(?) OR lower(email)=lower(?)
                             LIMIT 1";
         AddP(cmd, identifier); AddP(cmd, identifier);
         using var r = cmd.ExecuteReader();
