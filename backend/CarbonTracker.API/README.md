@@ -74,3 +74,51 @@ And decouple your internal database schema from your public API contracts, so da
 Determine data models for internal use (DB)
 Models represent the internal data structures that map directly to the database tables. They include all the fields and properties needed for data storage, retrieval, and manipulation within the application.
 
+### Controllers
+Controllers handle incoming HTTP requests, process them, and return appropriate responses. They define the API endpoints and the logic for handling various operations such as creating, reading, updating, and deleting resources.
+
+### Configuration / Appsettings.json
+Basic configuration file for the backend application. It typically contains settings such as database connection strings, logging configurations, and other application-specific settings.
+You can create environent specific versions of this file, e.g. appsettings.Development.json or appsettings.Production.json to override settings based on the environment the application is running in.
+
+### Services
+Services contain the business logic of the application. They interact with the data models and perform operations such as data validation, processing, and communication with external systems or databases.
+
+### Authentication
+Becrypt is used to hash user passwords before storing them in the database. This ensures that even if the database is compromised, the actual passwords remain secure.
+jwt (JSON Web Tokens) are used for authenticating users and securing API endpoints. When a user logs in successfully, the server generates a JWT that the client must include in the Authorization header of subsequent requests to access protected resources.
+
+
+
+### Database interaction
+
+We create a connection (centrally in Program.cs) to the DuckDB database file using the connection string defined in appsettings.json.)
+This connection is then injected into the controllers via dependency injection, allowing them to execute SQL queries against the database as needed.
+
+So for a single database operation, the steps are:
+1. Create connection 
+1. Create Command
+1. Add SQL to command
+1. Add parameters to command (if any)
+1. Excute command (ExecuteReader, ExecuteNonQuery, etc)
+
+1. For a transaction, you would also:
+1. Create connection
+1. Begin transaction
+1. Create Command
+1. Add transaction to command (so it knows to use that transaction)
+1. Add SQL to command
+1. Add parameters to command (if any)
+1. Excute command (ExecuteReader, ExecuteNonQuery, etc)
+1. Commit transaction (or rollback on error)
+
+
+
+### Dependency Ingections
+
+The backend uses Dependency Injection (DI) to manage the creation and lifetime of various services and components. This allows for better separation of concerns, easier testing, and more maintainable code.
+
+Lifetimes: 
+- Transient: A new instance is created each time it is requested. Suitable for lightweight, stateless services.
+- Scoped: A single instance is created per request. Useful for services that need to maintain state within a request but not across requests.
+- Singleton: A single instance is created and shared throughout the application's lifetime. Ideal for services that maintain global state or configuration.

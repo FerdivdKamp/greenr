@@ -1,31 +1,35 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using DuckDB.NET.Data;
 using CarbonTracker.API.Models;
+using Swashbuckle.AspNetCore.Annotations;
+using System.Data;
 
 namespace CarbonTracker.API.Controllers;
 
 [ApiController]
 [Route("api/users")]
+[SwaggerTag("Operations related to users")]
 public class UsersController : ControllerBase
 {
-    private readonly IConfiguration _configuration;
+    private readonly IDbConnection _db;  // injected connection
 
-    public UsersController(IConfiguration configuration)
+    public UsersController(IDbConnection db)
     {
-        _configuration = configuration;
+        _db = db;
     }
 
     [HttpGet]
+    [SwaggerOperation(
+        Summary = "Returns all users",
+        Description = "Returns the users in the users table."
+        )
+    ]
+    [SwaggerResponse(200, "Users returned", typeof(IEnumerable<User>))]
     public IActionResult Get()
     {
         var users = new List<User>();
-        var connectionString = _configuration.GetConnectionString("DuckDb");
 
-        using var conn = new DuckDBConnection(connectionString);
-        conn.Open();
-
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT user_id, email, first_name FROM users";
+        using var cmd = _db.CreateCommand();
+        cmd.CommandText = "SELECT user_id, email, user_name FROM users";
 
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
@@ -34,7 +38,7 @@ public class UsersController : ControllerBase
             {
                 UserId = reader.GetGuid(0),
                 Email = reader.GetString(1),
-                FirstName = reader.GetString(2)
+                UserName = reader.GetString(2)
             });
         }
 

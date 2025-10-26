@@ -16,16 +16,18 @@ user_id = uuid.UUID("123e4567-e89b-12d3-a456-426614174000")
 
 # Insert sample user
 con.execute("""
-INSERT INTO users (user_id, email, first_name, password_hash, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO users (user_id, user_name, email, first_name, password_hash, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(email) DO UPDATE SET
+    user_name = EXCLUDED.user_name,
     first_name = EXCLUDED.first_name,
     password_hash = EXCLUDED.password_hash,
     updated_at = EXCLUDED.updated_at
 """, (
     user_id,
+    "Ferdi83",
     "ferdivdkamp@gmail.com",
-    "ferdi",
+    "Ferdi",
     hashed_pw,
     datetime.now(),
     datetime.now()
