@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using CarbonTracker.API.Contracts.Authentication;
-using CarbonTracker.API.Services;
+using CarbonTracker.API.Services.Interfaces;
 
 namespace CarbonTracker.API.Controllers;
 
