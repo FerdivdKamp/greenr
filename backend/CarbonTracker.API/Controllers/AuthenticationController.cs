@@ -52,7 +52,7 @@ public class AuthenticationController : ControllerBase
     {
         // Intentionally return a generic message regardless of account existence
         var token = await _users.CreatePasswordResetAsync(req.Email);
-        return Ok(new { message = "If the email exists, a reset link will be sent.", token });
+        return Ok(new { message = "If the email exists, a reset link will be sent." });
     }
 
     [HttpPost("reset")]
