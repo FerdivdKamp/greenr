@@ -115,3 +115,6 @@ app.UseSwaggerUI(o =>
 
 app.MapControllers();
 app.Run();
+
+
+public partial class Program { }

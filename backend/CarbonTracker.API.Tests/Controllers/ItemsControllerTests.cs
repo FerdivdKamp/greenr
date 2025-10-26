@@ -1,17 +1,17 @@
-using Xunit;
-using Moq;
-using Microsoft.Extensions.Configuration;
+﻿namespace CarbonTracker.API.Tests.Controllers;
+
 using CarbonTracker.API.Controllers;
-using CarbonTracker.API.Models;
 using Microsoft.AspNetCore.Mvc;
+using Moq;
+using System.Data;
 
 public class ItemsControllerTests
 {
     [Fact]
     public void AddItem_ReturnsBadRequest_WhenItemIsNull()
     {
-        var mockConfig = new Mock<IConfiguration>();
-        var controller = new ItemsController(mockConfig.Object);
+        var mockDb = new Mock<IDbConnection>();
+        var controller = new ItemsController(mockDb.Object);
 
         var result = controller.AddItem(null);
 
