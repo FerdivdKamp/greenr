@@ -1,14 +1,5 @@
-﻿namespace CarbonTracker.API.Services
+﻿namespace CarbonTracker.API.Services.Interfaces
 {
-    using System;
-
-    public interface ITokenService
-    {
-        string CreateAccessToken(Guid userId, string username);
-        string CreateRefreshToken();
-        int RefreshDays();
-    }
-
     public interface IUsersService
     {
         Task CreateUserAsync(string username, string email, string password);
@@ -28,5 +19,4 @@
         // Resets password using token
         Task ResetPasswordAsync(string token, string newPassword);
     }
-
 }

@@ -1,4 +1,5 @@
 using CarbonTracker.API.Services;
+using CarbonTracker.API.Services.Interfaces;
 using DuckDB.NET.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -7,6 +8,7 @@ using Swashbuckle.AspNetCore.Filters;
 using System.Data;
 using System.Reflection;
 using System.Text;
+
 
 var builder = WebApplication.CreateBuilder(args);
 

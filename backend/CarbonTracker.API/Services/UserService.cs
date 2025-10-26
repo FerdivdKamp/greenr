@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Data;
 using System.Threading.Tasks;
+using CarbonTracker.API.Services.Interfaces;
 
 namespace CarbonTracker.API.Services;
+
 
 public class UsersService : IUsersService
 {
