@@ -31,15 +31,21 @@ Databases created by the old API with `users.username` are upgraded to the
 canonical `users.user_name` column.
 
 `python database/init_db.py` remains a compatibility alias and no longer deletes
-an existing database. To create test data after migrating, run
-`python database/init_test_data.py`.
+an existing database. To create test data after migrating, run:
+
+```
+python database/init_test_data.py
+```
+
+The seed script writes to `database/carbon_tracker.duckdb`, the same database
+used by the migration command and the API. Run the migration command first.
 
 
 During testing updating the database can be a bit of work, it might be simpler to just delete the [NAME].duckdb and run the python scripts again.
 
-To query from terminal run this to open db
+To query the development database from the repository root, run:
 
-`duckdb carbon_tracker.duckdb`
+`duckdb database/carbon_tracker.duckdb`
 
 `select * from items;`
 

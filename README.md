@@ -37,3 +37,17 @@ https://surveyjs.io/try/reactjs#try-creator
 After that the backend has an endpoint to store the questionnaire in the database, or add a new version of it and publish it. Just check swagger
 
 
+
+
+
+
+### Quick Start
+```
+python -m pip install -r database/requirements.txt
+python database/migrate.py database/carbon_tracker.duckdb
+
+cd backend\CarbonTracker.API
+dotnet run --launch-profile http
+```
+
+Then open: http://localhost:5285/swagger

@@ -2,9 +2,12 @@ import duckdb
 import bcrypt
 import uuid
 from datetime import datetime, date
+from pathlib import Path
 
-# Connect to the existing DuckDB file
-con = duckdb.connect("carbon_tracker.duckdb")
+# Connect to the database created by migrate.py, regardless of the current
+# working directory used to run this script.
+DATABASE_PATH = Path(__file__).with_name("carbon_tracker.duckdb")
+con = duckdb.connect(str(DATABASE_PATH))
 
 # Hash the password using bcrypt
 password = "1234!"
