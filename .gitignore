@@ -71,6 +71,7 @@ ios/Podfile.lock
 # ===================================
 # OS / Misc
 # ===================================
+/%SystemDrive%/
 .DS_Store
 Thumbs.db
 desktop.ini
