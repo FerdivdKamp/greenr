@@ -15,39 +15,6 @@ public class UsersService : IUsersService
     {
         _db = db;
         _tokens = tokens;
-        EnsureSchema();
-    }
-
-    private void EnsureSchema()
-    {
-        using var cmd = _db.CreateCommand();
-        cmd.CommandText = @"
-            CREATE TABLE IF NOT EXISTS users (
-              user_id UUID DEFAULT uuidv4() PRIMARY KEY,
-              email TEXT UNIQUE NOT NULL,
-              username TEXT UNIQUE NOT NULL,
-              first_name TEXT,
-              password_hash TEXT NOT NULL,
-              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS password_reset_tokens (
-              token TEXT PRIMARY KEY,
-              user_id UUID NOT NULL,
-              expires_at TIMESTAMP NOT NULL,
-              used_at TIMESTAMP,
-              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS refresh_tokens (
-              token TEXT PRIMARY KEY,
-              user_id UUID NOT NULL,
-              expires_at TIMESTAMP NOT NULL,
-              revoked_at TIMESTAMP,
-              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );";
-        cmd.ExecuteNonQuery();
     }
 
     public async Task CreateUserAsync(string username, string email, string password)
