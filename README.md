@@ -13,7 +13,7 @@ Each has its own subfolder with a README.md for its part
 To get started.
 
 1. The database folder has explicit commands to initialize and seed a local DuckDB database. Follow [database/README.md](database/README.md).
-1. Open the backend solution in Visual Studio and make a build
+1. Install the .NET 10 SDK and follow the backend [restore, build, and test guide](backend/CarbonTracker.API/README.md).
 1. Open the mobile app, run the emulator and after that flutter
 
 The mobile app will talk with the database through the backend.
