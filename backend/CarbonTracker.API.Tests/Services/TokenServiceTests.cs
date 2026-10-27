@@ -13,11 +13,11 @@ using CarbonTracker.API.Services;
 
 public class TokenServiceTests
 {
-    private static IConfiguration BuildConfig(Dictionary<string, string?> overrides = null)
+    private static IConfiguration BuildConfig(Dictionary<string, string?>? overrides = null)
     {
         var dict = new Dictionary<string, string?>
         {
-            ["Jwt:Key"] = "super-secret-test-key-1234567890",
+            ["Jwt:Key"] = "super-secret-test-key-1234567890-at-least-32-bytes",
             ["Jwt:Issuer"] = "greenr-issuer",
             ["Jwt:Audience"] = "greenr-audience",
             ["Jwt:AccessTokenMinutes"] = "5",

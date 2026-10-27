@@ -4,12 +4,12 @@
 
 Greenr is a learning project for helping a person understand their carbon footprint. It has four parts:
 
-- **Backend:** ASP.NET Core 8 API with DuckDB, JWT token creation, items, and versioned SurveyJS questionnaires.
+- **Backend:** ASP.NET Core 10 API with DuckDB, JWT token creation, items, and versioned SurveyJS questionnaires.
 - **Frontend:** React, TypeScript, Vite, React Query, SurveyJS, charts, and some Storybook setup.
 - **Mobile:** Flutter prototype that lists users and items and visualises an item's footprint over time.
 - **Database:** DuckDB schema and seed-data Python scripts.
 
-There is a useful foundation, but the components do not yet form a secure end-to-end product. In particular, the API schema and authentication service disagree about `user_name` versus `username`; authentication/authorization middleware is not in the request pipeline; item and questionnaire data are not scoped to the signed-in user; clients contain hard-coded development URLs/IDs; and automated tests are mostly scaffolding. A local `dotnet build --no-restore --disable-build-servers` currently stops with `MSB5021` (compiler process cancelled) without reporting a compile error, so build health must be established first.
+There is a useful foundation, but the components do not yet form a secure end-to-end product. In particular, authentication/authorization middleware is not explicitly configured in the request pipeline; item and questionnaire API access is not scoped to the signed-in user; clients contain hard-coded development URLs/IDs; and automated coverage is limited. BE-01 aligns the API and tests on .NET 10 and documents the observed sandbox-related `MSB5021` cancellation; restore/build/test succeed outside the restricted runner. See the [backend guide](README.md) for commands, prerequisites, and troubleshooting.
 
 ## Product assumption and questions
 
@@ -88,12 +88,12 @@ Make ownership a database concern as well as an API concern: require `items.user
 `area:backend`, `type:bug`, `priority:critical`  
 **Depends on:** none
 
-Investigate the reproducible `MSB5021` compiler-process cancellation. Capture the actual environment/toolchain cause, align target frameworks where appropriate (API is .NET 8; tests are .NET 9), and remove stale build artefacts only through safe, documented commands.
+Investigate the reproducible `MSB5021` compiler-process cancellation. Capture the actual environment/toolchain cause, migrate the API and tests to .NET 10 LTS (previously .NET 8 and .NET 9 respectively), select a deliberate SDK policy, and remove stale build artefacts only through safe, documented commands. No other backend issue covers the .NET 10 upgrade; it is included in BE-01.
 
 **Acceptance criteria**
 
 - `dotnet restore`, `dotnet build`, and `dotnet test` have documented commands and succeed from a clean checkout.
-- The solution uses a deliberate, supported SDK/target-framework strategy.
+- The API and tests target .NET 10 LTS with compatible dependencies and a documented SDK selection policy in `global.json`.
 - A short troubleshooting note explains the resolved cancellation and any required local prerequisites.
 
 #### BE-02 — Complete JWT authentication plumbing and secure user endpoints

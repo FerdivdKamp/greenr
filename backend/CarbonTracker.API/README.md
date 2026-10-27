@@ -1,12 +1,84 @@
 ﻿## Introduction to the greenr backend
 
 
-To run the backend, when this is running you can start the mobile app (see the mobile app README).
-```bash
-dotnet run
+### Prerequisites and toolchain
+
+The API and test project both target **.NET 10 LTS**. Install the .NET 10 SDK
+**10.0.4xx** (not just a runtime). The repository's `global.json` selects the
+latest installed servicing patch in that feature band and excludes preview SDKs.
+Run `dotnet --info` from the repository root to check the selected SDK. Keep the
+SDK and runtimes serviced with current security patches. Visual Studio users need
+Visual Studio 2026 with .NET 10 support, or use the CLI/VS Code.
+
+This replaces the previous .NET 8 API / .NET 9 tests split. Both older versions
+reach end of support on November 10, 2026; .NET 10 is supported through November
+2028 ([Microsoft support guidance](https://devblogs.microsoft.com/dotnet/dotnet-8-9-end-of-support/)).
+JWT bearer authentication and the integration-test host use matching .NET 10
+packages. Swagger remains on Swashbuckle; the unused
+`Microsoft.AspNetCore.OpenApi` reference was removed because the API does not use
+`AddOpenApi`/`MapOpenApi`.
+
+### Restore, build, and test
+
+Run these commands from the **repository root**, including in a fresh worktree:
+
+```powershell
+dotnet restore backend/CarbonTracker.API/CarbonTracker.API.sln
+dotnet build backend/CarbonTracker.API/CarbonTracker.API.sln --no-restore
+dotnet test backend/CarbonTracker.API/CarbonTracker.API.sln --no-build --no-restore
 ```
 
-Or just hit F5 in Visual Studio to start debugging, as running in terminal will not allow you to set breakpoints.
+Restore needs access to NuGet.org on first use. Build/test do not require Python,
+a local DuckDB database, or local JWT configuration. Tests include API startup,
+Swagger UI and OpenAPI generation with an isolated test signing key and an
+in-memory database connection, plus controller and token-service checks.
+
+### Run locally
+
+Initialise the database using [the database guide](../../database/README.md).
+Then start the API from its project directory so the relative database path
+resolves correctly:
+
+```powershell
+cd backend/CarbonTracker.API
+dotnet run --launch-profile http
+```
+
+Open http://localhost:5285/swagger, then start the desired client. Visual Studio
+can also start the API with F5; VS Code and Visual Studio can attach a debugger
+to an API started from the CLI.
+
+### Troubleshooting build cancellation
+
+BE-01 reproduced `MSB5021` with SDK 10.0.401 on Windows when running
+`dotnet build ... --no-restore --disable-build-servers` inside the restricted
+Codex execution sandbox. The identical command, against the same fresh worktree,
+succeeded outside the sandbox without changing source or deleting build output;
+the original .NET 8/.NET 9 tests also passed there. This isolates the observed
+cancellation to the execution environment, rather than a C# compilation error
+or a required cache reset. The specific underlying OS restriction was not
+identified. `MSB5021` reports cancellation; it does not identify its cause.
+
+If this happens in a restricted runner, allow the build/compiler child processes
+through the runner's approval mechanism, or use a normal developer terminal.
+Do not disable host security controls. If it also fails in a normal terminal,
+capture a diagnostic log and check earlier messages and runner timeout/resource
+limits before assuming it is the same cause:
+
+```powershell
+dotnet build backend/CarbonTracker.API/CarbonTracker.API.sln --no-restore --disable-build-servers --verbosity diagnostic > backend-build.log
+```
+
+If output is stale or locked after switching SDKs, stop the running API/debugger
+and use the SDK's scoped cleanup commands from the repository root:
+
+```powershell
+dotnet build-server shutdown
+dotnet clean backend/CarbonTracker.API/CarbonTracker.API.sln
+```
+
+Then repeat restore/build/test above. These commands clean generated project
+output; no recursive directory deletion or database reset is needed.
 
 
 ### Swagger

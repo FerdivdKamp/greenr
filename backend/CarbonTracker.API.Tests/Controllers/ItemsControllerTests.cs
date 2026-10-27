@@ -13,7 +13,7 @@ public class ItemsControllerTests
         var mockDb = new Mock<IDbConnection>();
         var controller = new ItemsController(mockDb.Object);
 
-        var result = controller.AddItem(null);
+        var result = controller.AddItem(null!);
 
         Assert.IsType<BadRequestResult>(result);
     }
