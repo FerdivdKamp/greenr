@@ -73,7 +73,7 @@ class DevelopmentDatabaseTests(unittest.TestCase):
             self.assertEqual(1, connection.execute(
                 "SELECT COUNT(*) FROM questionnaire"
             ).fetchone()[0])
-            self.assertEqual(2, connection.execute(
+            self.assertEqual(3, connection.execute(
                 "SELECT COUNT(*) FROM schema_migrations"
             ).fetchone()[0])
         finally:
@@ -102,7 +102,7 @@ class DevelopmentDatabaseTests(unittest.TestCase):
         connection = duckdb.connect(str(self.database), read_only=True)
         try:
             self.assertEqual(0, connection.execute("SELECT COUNT(*) FROM users").fetchone()[0])
-            self.assertEqual(2, connection.execute(
+            self.assertEqual(3, connection.execute(
                 "SELECT COUNT(*) FROM schema_migrations"
             ).fetchone()[0])
         finally:

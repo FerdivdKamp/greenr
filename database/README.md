@@ -17,6 +17,26 @@ initialized database and adds a development account, four sample items, and one
 active questionnaire. It uses fixed IDs, so rerunning it does not duplicate
 records or overwrite edits, including a password changed through the API.
 
+Migration 003 requires every item to have a real `users.user_id`. If an older
+database has ownerless items, `init` stops and rolls back without deleting data.
+Inspect them with `SELECT item_id, item_name FROM items WHERE user_id IS NULL`,
+decide the correct owner for each row, and update those rows explicitly before
+rerunning `init`. Do not assign all ownerless rows to a guessed user. The migration
+also checks existing questionnaire version links, one active version per family,
+and response ownership/family references before rebuilding the tables.
+
+Items now require an owner at the database level; their user index supports
+selective per-user queries, while DuckDB's date zonemap helps date filtering.
+Responses may be anonymous (`user_id IS NULL`), but a supplied user ID must
+exist. Questionnaire status is limited to `draft`, `active`, or `inactive`,
+versions must be positive and unique within a family. DuckDB 1.x cannot
+enforce the cross-row `supersedes_id`/`replaced_by_id` links or a unique active
+version without blocking normal publish updates once responses exist. `init`
+checks the links and active-version count every time it runs; application
+writes must keep links within the same family and in version order, with at
+most one active version. Authenticated item creation and claim-derived response
+ownership are separate API work in BE-03 and BE-05.
+
 The account is `dev_demo` / `dev@example.invalid`, with the local password you
 supplied through `GREENR_DEV_SEED_PASSWORD`. These fixtures are only for local
 development and UI/API testing. The address is reserved for examples; use your
