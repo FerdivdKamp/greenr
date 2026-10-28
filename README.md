@@ -34,7 +34,9 @@ https://nodejs.org/en/download
 You can use this and save and edit the JSON locally
 https://surveyjs.io/try/reactjs#try-creator
 
-After that the backend has an endpoint to store the questionnaire in the database, or add a new version of it and publish it. Just check swagger
+The backend can store and publish supported SurveyJS definitions. Authoring requires
+the `QuestionnaireAdmin` role. Follow the [questionnaire administration guide](backend/CarbonTracker.API/QUESTIONNAIRES.md)
+for setup, version semantics, answer validation rules, and manual checks.
 
 
 

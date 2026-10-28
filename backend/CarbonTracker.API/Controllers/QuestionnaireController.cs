@@ -1,5 +1,7 @@
-﻿using CarbonTracker.API.Contracts.Questionnaires;
-using CarbonTracker.API.Models;
+using CarbonTracker.API.Contracts.Questionnaires;
+using CarbonTracker.API.Services;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 using DuckDB.NET.Data;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -12,6 +14,7 @@ using System.Text.Json;
 namespace CarbonTracker.API.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/questionnaires")]
 
 public class QuestionnaireController : ControllerBase
@@ -23,14 +26,28 @@ public class QuestionnaireController : ControllerBase
         _db = db;
     }
 
+    private string? ValidatePublishTarget(IDbTransaction tx, Guid id)
+    {
+        using var command = _db.CreateCommand();
+        command.Transaction = tx;
+        command.CommandText = "SELECT definition_json FROM questionnaire WHERE id = ?";
+        command.Parameters.Add(new DuckDBParameter { Value = id });
+        try
+        {
+            using var definition = JsonDocument.Parse((string)command.ExecuteScalar()!);
+            return QuestionnaireValidation.ValidateDefinition(definition.RootElement);
+        }
+        catch (JsonException) { return "Stored definition is invalid JSON; create a supported version."; }
+    }
+
     // --------------------------------------------------------------------
     // GET: /api/questionnaires
     // (List all questionnaires - return full DTOs incl. definition_json)
     // --------------------------------------------------------------------
     [HttpGet]
     [SwaggerOperation(
-        Summary = "Returns all questionnaires",
-        Description = "Returns a list of all questionnaires in the system"
+        Summary = "List active questionnaires, or all versions for administrators",
+        Description = "Ordinary users see active definitions only. Administrators also see drafts and inactive versions."
         )
     ]
     public IActionResult GetAll()
@@ -40,8 +57,10 @@ public class QuestionnaireController : ControllerBase
         cmd.CommandText = @"
             SELECT id, canonical_id, version, title, status, created_at, updated_at, definition_json
             FROM questionnaire
+            WHERE (? OR status = 'active')
             ORDER BY created_at DESC, version DESC";
 
+        cmd.Parameters.Add(new DuckDBParameter { Value = User.IsInRole("QuestionnaireAdmin") });
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
@@ -84,9 +103,10 @@ public class QuestionnaireController : ControllerBase
         cmd.CommandText = @"
             SELECT id, canonical_id, version, title, status, created_at, updated_at, definition_json
             FROM questionnaire
-            WHERE id = ?";
+            WHERE id = ? AND (? OR status = 'active')";
 
         cmd.Parameters.Add(new DuckDBParameter { Value = id });
+        cmd.Parameters.Add(new DuckDBParameter { Value = User.IsInRole("QuestionnaireAdmin") });
 
         using var r = cmd.ExecuteReader();
         if (!r.Read()) return NotFound();
@@ -147,6 +167,7 @@ public class QuestionnaireController : ControllerBase
 
 
     [HttpPost]
+    [Authorize(Roles = "QuestionnaireAdmin")]
     [Consumes("application/json")]
     [SwaggerOperation(Summary = "Create questionnaire (new or new version)",
     Description = "Post SurveyJS JSON. Use SupersedesId to bump version in the same canonical.")]
@@ -158,13 +179,13 @@ public class QuestionnaireController : ControllerBase
         if (!ModelState.IsValid) return ValidationProblem(ModelState);
         if (string.IsNullOrWhiteSpace(dto.Title)) return BadRequest("Title is required.");
 
-        // Convert posted definition (SurveyJS JSON) to a string to store
-        var definitionJson = dto.Definition.ValueKind switch
-        {
-            JsonValueKind.String => dto.Definition.GetString() ?? "{}",
-            JsonValueKind.Undefined or JsonValueKind.Null => "{}",
-            _ => dto.Definition.GetRawText()
-        };
+        if (dto.Status is not (null or "draft"))
+            return BadRequest("New versions must be draft; use a publish endpoint to activate them.");
+        if (dto.CanonicalId == Guid.Empty || dto.SupersedesId == Guid.Empty)
+            return BadRequest("Family and supersedes IDs must not be empty.");
+        var definitionError = QuestionnaireValidation.ValidateDefinition(dto.Definition);
+        if (definitionError is not null) return BadRequest(definitionError);
+        var definitionJson = dto.Definition.GetRawText();
 
         using var tx = _db.BeginTransaction();
 
@@ -192,8 +213,14 @@ public class QuestionnaireController : ControllerBase
                 tx.Rollback();
                 return StatusCode(500, "Stored canonical_id is not a valid GUID.");
             }
-            var prevVersion = Convert.ToInt32(r["version"]);
-            version = prevVersion + 1;
+            if (dto.CanonicalId.HasValue && dto.CanonicalId != canonicalId)
+                return BadRequest("canonicalId does not match supersedesId.");
+            r.Close();
+            using var max = _db.CreateCommand();
+            max.Transaction = tx;
+            max.CommandText = "SELECT MAX(version) FROM questionnaire WHERE canonical_id = ?";
+            max.Parameters.Add(new DuckDBParameter { Value = canonicalId });
+            version = Convert.ToInt32(max.ExecuteScalar()) + 1;
         }
         else
         {
@@ -208,7 +235,7 @@ public class QuestionnaireController : ControllerBase
 
         // 2) Insert new row
         var id = Guid.NewGuid();
-        var status = string.IsNullOrWhiteSpace(dto.Status) ? "draft" : dto.Status!.Trim();
+        var status = "draft";
 
         using (var cmdIns = _db.CreateCommand())
         {
@@ -226,22 +253,6 @@ public class QuestionnaireController : ControllerBase
             cmdIns.Parameters.Add(new DuckDBParameter { Value = status });
             cmdIns.Parameters.Add(new DuckDBParameter { Value = dto.SupersedesId ?? (object)DBNull.Value });
             cmdIns.ExecuteNonQuery();
-        }
-
-        // 3) If superseding, mark previous row
-        if (dto.SupersedesId.HasValue)
-        {
-            using var cmdUpdPrev = _db.CreateCommand();
-            cmdUpdPrev.Transaction = tx;
-            cmdUpdPrev.CommandText = @"
-                UPDATE questionnaire
-                   SET replaced_by_id = ?,
-                       status = CASE WHEN status = 'active' THEN 'inactive' ELSE status END,
-                       updated_at = CURRENT_TIMESTAMP
-                 WHERE id = ?";
-            cmdUpdPrev.Parameters.Add(new DuckDBParameter { Value = id });
-            cmdUpdPrev.Parameters.Add(new DuckDBParameter { Value = dto.SupersedesId.Value });
-            cmdUpdPrev.ExecuteNonQuery();
         }
 
         tx.Commit();
@@ -265,6 +276,7 @@ public class QuestionnaireController : ControllerBase
     // Sets this row to 'active' and inactivates prior active in the same family
     // --------------------------------------------------------------------
     [HttpPost("{id:guid}/publish")]
+    [Authorize(Roles = "QuestionnaireAdmin")]
     [SwaggerOperation(
         Summary = "Publish questionnaire version by id",
         Description = "Activate a version by id. Inactivates the previous active version and sets its replaced_by_id = target."
@@ -289,6 +301,9 @@ public class QuestionnaireController : ControllerBase
             }
         }
 
+        var definitionError = ValidatePublishTarget(tx, id);
+        if (definitionError is not null) return BadRequest(definitionError);
+
         // Inactivate any currently active in this family
         using (var cmdInactive = _db.CreateCommand())
         {
@@ -309,7 +324,7 @@ public class QuestionnaireController : ControllerBase
             cmdActive.Transaction = tx;
             cmdActive.CommandText = @"
                 UPDATE questionnaire
-                   SET status = 'active', updated_at = CURRENT_TIMESTAMP
+                   SET status = 'active', updated_at = CURRENT_TIMESTAMP, replaced_by_id = NULL
                  WHERE id = ?";
             cmdActive.Parameters.Add(new DuckDBParameter { Value = id });
             var updated = cmdActive.ExecuteNonQuery();
@@ -325,6 +340,7 @@ public class QuestionnaireController : ControllerBase
     }
 
     [HttpPost("families/{canonicalId:guid}/publish")]
+    [Authorize(Roles = "QuestionnaireAdmin")]
     [SwaggerOperation(Summary = "Publish within a canonical family",
     Description = "Activate a version by targetId, targetVersion, or latest=true. " +
                   "Inactivates the previous active version and sets its replaced_by_id = target.")]
@@ -335,6 +351,10 @@ public class QuestionnaireController : ControllerBase
     public IActionResult PublishByCanonical(Guid canonicalId, [FromBody] PublishByCanonicalRequest body)
     {
         using var tx = _db.BeginTransaction();
+
+        if ((body.TargetId.HasValue ? 1 : 0) + (body.TargetVersion.HasValue ? 1 : 0) + (body.Latest ? 1 : 0) != 1
+            || body.TargetId == Guid.Empty || body.TargetVersion <= 0)
+            return BadRequest("Provide exactly one of targetId, positive targetVersion, or latest=true.");
 
         // 1) Resolve the target version id within the family
         Guid targetId;
@@ -393,6 +413,9 @@ public class QuestionnaireController : ControllerBase
             return BadRequest("Provide targetId, targetVersion, or set latest=true.");
         }
 
+        var definitionError = ValidatePublishTarget(tx, targetId);
+        if (definitionError is not null) return BadRequest(definitionError);
+
         // 2) Inactivate any currently active in this family and link it to the target
         using (var cmdInactive = _db.CreateCommand())
         {
@@ -415,7 +438,7 @@ public class QuestionnaireController : ControllerBase
             cmdActive.Transaction = tx;
             cmdActive.CommandText = @"
             UPDATE questionnaire
-               SET status = 'active', updated_at = CURRENT_TIMESTAMP
+               SET status = 'active', updated_at = CURRENT_TIMESTAMP, replaced_by_id = NULL
              WHERE id = ?";
             cmdActive.Parameters.Add(new DuckDBParameter { Value = targetId });
             var updated = cmdActive.ExecuteNonQuery();
@@ -432,13 +455,11 @@ public class QuestionnaireController : ControllerBase
 
     [HttpPost("{questionnaireId:guid}/responses")]
     [SwaggerOperation(Summary = "post response to questionnaire",
-    Description = "Post a response, TODO figure out what is expected and match that.")]
+    Description = "Submit validated answers to an active version as the signed-in user.")]
     public IActionResult SubmitResponse(Guid questionnaireId, [FromBody] SubmitResponseRequest request)
     {
-        // {
-           //"userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-           //"answers": { "dagen_naar_werk": 1, "vervoer": ["public_transport"], "reis_tijd_totaal": "00:30"}
-        //}
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var owner) || owner == Guid.Empty)
+            return Unauthorized();
 
         if (request.Answers.ValueKind != JsonValueKind.Object)
             return BadRequest("`answers` must be a JSON object.");
@@ -452,7 +473,7 @@ public class QuestionnaireController : ControllerBase
         using (var cmd = _db.CreateCommand())
         {
             cmd.Transaction = tx;
-            cmd.CommandText = "SELECT canonical_id, definition_json FROM questionnaire WHERE id = ?";
+            cmd.CommandText = "SELECT canonical_id, definition_json FROM questionnaire WHERE id = ? AND status = 'active'";
             cmd.Parameters.Add(new DuckDBParameter { Value = questionnaireId });
 
             using var rdr = cmd.ExecuteReader();
@@ -465,6 +486,13 @@ public class QuestionnaireController : ControllerBase
             canonicalId = Guid.Parse(rdr.GetValue(0)!.ToString()!);
             definitionJson = rdr.IsDBNull(1) ? null : rdr.GetString(1);
         }
+
+        JsonDocument definition;
+        try { definition = JsonDocument.Parse(definitionJson!); }
+        catch (JsonException) { return BadRequest("Stored definition is invalid JSON; an administrator must publish a supported version."); }
+        using var definitionScope = definition;
+        var answerError = QuestionnaireValidation.ValidateAnswers(definition.RootElement, request.Answers);
+        if (answerError is not null) return BadRequest(answerError);
 
         // 2) Compute a stable hash of the active definition (or empty if not available)
         var definitionHash = ComputeSha256(definitionJson ?? string.Empty);
@@ -482,7 +510,7 @@ public class QuestionnaireController : ControllerBase
             cmd.Parameters.Add(new DuckDBParameter { Value = responseId });
             cmd.Parameters.Add(new DuckDBParameter { Value = questionnaireId });
             cmd.Parameters.Add(new DuckDBParameter { Value = canonicalId });
-            cmd.Parameters.Add(new DuckDBParameter { Value = (object?)request.UserId ?? DBNull.Value });
+            cmd.Parameters.Add(new DuckDBParameter { Value = owner });
 
             cmd.Parameters.Add(new DuckDBParameter { Value = definitionHash });
             cmd.Parameters.Add(new DuckDBParameter { Value = answersRaw });
@@ -539,7 +567,10 @@ public class QuestionnaireController : ControllerBase
             switch (value.ValueKind)
             {
                 case JsonValueKind.Number:
-                    if (value.TryGetDecimal(out var d)) return (null, d, null);
+                    // response_item has DECIMAL(18,4); keep other numbers in text
+                    // so projection cannot overflow or silently round the raw answer.
+                    if (value.TryGetDecimal(out var d) && Math.Abs(d) <= 99999999999999.9999m
+                        && decimal.Round(d, 4) == d) return (null, d, null);
                     return (value.GetRawText(), null, null); // fallback to text if it’s too big
                 case JsonValueKind.String:
                     var s = value.GetString();

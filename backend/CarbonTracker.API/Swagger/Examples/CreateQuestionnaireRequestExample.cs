@@ -20,7 +20,7 @@ public sealed class CreateQuestionnaireRequestExample : IExamplesProvider<Create
                     {"value":"public_transport","text":"OV"},
                     {"value":"car","text":"Auto"},
                     {"value":"bike","text":"Fiets"}],
-                  "validators":[{ "type":"answercount","maxCount":3 }]
+                  "isRequired": false
                 },
                 { "type": "text", "name": "reis_tijd_totaal", "inputType": "time" }
               ]
