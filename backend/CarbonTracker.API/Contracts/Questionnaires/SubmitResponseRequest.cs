@@ -5,7 +5,6 @@ namespace CarbonTracker.API.Contracts.Questionnaires
 {
     public sealed class SubmitResponseRequest
     {
-        public Guid? UserId { get; set; }
         [Required] 
         public JsonElement Answers { get; set; }
     }

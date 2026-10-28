@@ -21,12 +21,16 @@ public class TokenService : ITokenService
     public string CreateAccessToken(Guid userId, string username)
     {
         var creds = new SigningCredentials(_key, SecurityAlgorithms.HmacSha256);
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")),
             new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
             new Claim(ClaimTypes.Name, username)
         };
+        // Only operators can grant administration; registration never accepts roles.
+        if (_cfg.GetSection("Questionnaires:AdminUserIds").GetChildren()
+            .Any(entry => Guid.TryParse(entry.Value, out var id) && id != Guid.Empty && id == userId))
+            claims.Add(new Claim(ClaimTypes.Role, "QuestionnaireAdmin"));
 
         var minutes = int.Parse(_cfg["Jwt:AccessTokenMinutes"] ?? "15");
         var token = new JwtSecurityToken(

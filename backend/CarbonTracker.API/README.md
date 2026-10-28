@@ -35,6 +35,10 @@ in-memory database connection, plus controller and token-service checks.
 
 ### Run locally
 
+Questionnaire routes require sign-in, and authoring/publishing require an
+operator-granted role. See [questionnaire administration and response rules](QUESTIONNAIRES.md)
+for setup, version semantics, supported SurveyJS validation, and manual checks.
+
 Initialise the database using [the database guide](../../database/README.md).
 Configure `Jwt:Key` in user secrets using the root
 [authentication setup and testing guide](../../README.md#authentication-setup-and-testing-issue-16),

@@ -6,7 +6,6 @@ public sealed class SubmitResponseRequestExample : IExamplesProvider<SubmitRespo
 {
     public SubmitResponseRequest GetExamples() => new()
     {
-        UserId = null, // or Guid if you have authentication
         Answers = JsonDocument.Parse("""
         {
           "dagen_naar_werk": 0,
