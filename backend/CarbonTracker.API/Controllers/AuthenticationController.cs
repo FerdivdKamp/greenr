@@ -10,7 +10,7 @@ namespace CarbonTracker.API.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-[SwaggerTag("Authentication (register, login, password reset)")]
+[SwaggerTag("Authentication (register, login, refresh, logout, password reset)")]
 public class AuthenticationController : ControllerBase
 {
     private readonly IUsersService _users;
@@ -50,6 +50,7 @@ public class AuthenticationController : ControllerBase
         if (!valid) return InvalidCredentials();
 
         var tokens = await _users.IssueTokensAsync(user.Value.UserId, user.Value.Username);
+        Response.Headers.CacheControl = "no-store";
         return Ok(new TokenResponse(tokens.AccessToken, tokens.RefreshToken));
     }
 
@@ -59,7 +60,7 @@ public class AuthenticationController : ControllerBase
     public async Task<IActionResult> RequestPasswordReset([FromBody] RequestPasswordResetRequest req)
     {
         // Intentionally return a generic message regardless of account existence
-        var token = await _users.CreatePasswordResetAsync(req.Email);
+        await _users.CreatePasswordResetAsync(req.Email);
         return Ok(new { message = "If the email exists, a reset link will be sent." });
     }
 
@@ -77,6 +78,32 @@ public class AuthenticationController : ControllerBase
             return Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid or expired token.");
         }
         return Ok(new { message = "Password updated." });
+    }
+
+    [HttpPost("refresh")]
+    [AllowAnonymous]
+    [SwaggerOperation(Summary = "Exchange a refresh token for a new access/refresh pair (single use)")]
+    public async Task<ActionResult<TokenResponse>> Refresh([FromBody] RefreshTokenRequest req)
+    {
+        try
+        {
+            var tokens = await _users.RefreshAsync(req.RefreshToken);
+            Response.Headers.CacheControl = "no-store";
+            return Ok(new TokenResponse(tokens.AccessToken, tokens.RefreshToken));
+        }
+        catch (InvalidRefreshTokenException)
+        {
+            return Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Invalid or expired refresh token.");
+        }
+    }
+
+    [HttpPost("logout")]
+    [AllowAnonymous]
+    [SwaggerOperation(Summary = "Revoke the supplied refresh token (idempotent)")]
+    public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest req)
+    {
+        await _users.RevokeAsync(req.RefreshToken);
+        return NoContent();
     }
 
     private ObjectResult InvalidCredentials() =>

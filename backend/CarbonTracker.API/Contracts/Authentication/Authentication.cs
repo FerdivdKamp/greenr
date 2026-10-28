@@ -11,6 +11,7 @@ public record LoginRequest(
     [Required, StringLength(254)] string Identifier,
     [Required, PasswordByteLength] string Password);
 public record TokenResponse(string AccessToken, string RefreshToken);
+public record RefreshTokenRequest([Required, StringLength(256)] string RefreshToken);
 public record RequestPasswordResetRequest([Required, EmailAddress, StringLength(254)] string Email);
 public record ResetPasswordRequest(
     [Required, StringLength(256)] string Token,

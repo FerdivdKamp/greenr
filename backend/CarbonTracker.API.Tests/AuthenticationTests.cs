@@ -173,6 +173,13 @@ public sealed class AuthenticationFactory : WebApplicationFactory<Program>
         }
     }
 
+    public DuckDBConnection OpenDatabase()
+    {
+        var connection = new DuckDBConnection("Data Source=" + _database);
+        connection.Open();
+        return connection;
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
