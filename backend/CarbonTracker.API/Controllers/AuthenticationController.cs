@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using CarbonTracker.API.Contracts.Authentication;
 using CarbonTracker.API.Services.Interfaces;
+using CarbonTracker.API.Services;
 
 namespace CarbonTracker.API.Controllers;
 
@@ -26,7 +27,14 @@ public class AuthenticationController : ControllerBase
     [SwaggerOperation(Summary = "Register a new user")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest req)
     {
-        await _users.CreateUserAsync(req.Username, req.Email, req.Password);
+        try
+        {
+            await _users.CreateUserAsync(req.Username, req.Email, req.Password);
+        }
+        catch (DuplicateAccountException)
+        {
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "Username or email already exists.");
+        }
         return Ok(new { message = "Account created." });
     }
 
@@ -36,10 +44,10 @@ public class AuthenticationController : ControllerBase
     public async Task<ActionResult<TokenResponse>> Login([FromBody] LoginRequest req)
     {
         var user = await _users.FindByIdentifierAsync(req.Identifier);
-        if (user is null) return Unauthorized("Invalid username or password.");
+        if (user is null) return InvalidCredentials();
 
         var valid = await _users.VerifyPasswordAsync(user.Value.UserId, req.Password);
-        if (!valid) return Unauthorized("Invalid username or password.");
+        if (!valid) return InvalidCredentials();
 
         var tokens = await _users.IssueTokensAsync(user.Value.UserId, user.Value.Username);
         return Ok(new TokenResponse(tokens.AccessToken, tokens.RefreshToken));
@@ -60,9 +68,19 @@ public class AuthenticationController : ControllerBase
     [SwaggerOperation(Summary = "Reset password using a reset token")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest req)
     {
-        await _users.ResetPasswordAsync(req.Token, req.NewPassword);
+        try
+        {
+            await _users.ResetPasswordAsync(req.Token, req.NewPassword);
+        }
+        catch (InvalidResetTokenException)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid or expired token.");
+        }
         return Ok(new { message = "Password updated." });
     }
+
+    private ObjectResult InvalidCredentials() =>
+        Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Invalid username or password.");
 
     [HttpGet("me")]
     [Authorize]

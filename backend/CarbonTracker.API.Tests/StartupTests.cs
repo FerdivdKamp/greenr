@@ -12,7 +12,7 @@ public class StartupTests
         await using var factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder => builder
                 .UseEnvironment("Testing")
-                .UseSetting("Jwt:Key", "startup-test-signing-key-at-least-32-bytes")
+                .UseSetting("Jwt:Key", Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)))
                 .UseSetting("ConnectionStrings:DuckDb", "Data Source=:memory:"));
         using var client = factory.CreateClient();
 

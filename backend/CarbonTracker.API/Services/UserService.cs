@@ -25,7 +25,7 @@ public class UsersService : IUsersService
             check.CommandText = "SELECT 1 FROM users WHERE lower(user_name)=lower(?) OR lower(email)=lower(?) LIMIT 1";
             AddP(check, username); AddP(check, email);
             using var r = check.ExecuteReader();
-            if (r.Read()) throw new InvalidOperationException("Username or email already exists.");
+            if (r.Read()) throw new DuplicateAccountException();
         }
 
         var hash = BCrypt.Net.BCrypt.HashPassword(password);
@@ -112,14 +112,14 @@ public class UsersService : IUsersService
                                 FROM password_reset_tokens WHERE token=? LIMIT 1";
             AddP(get, token);
             using var r = get.ExecuteReader();
-            if (!r.Read()) throw new InvalidOperationException("Invalid or expired token.");
+            if (!r.Read()) throw new InvalidResetTokenException();
             userId = r.GetGuid(0);
             expires = r.GetDateTime(1);
             used = r.IsDBNull(2) ? null : r.GetDateTime(2);
         }
 
         if (used != null || expires < DateTime.UtcNow)
-            throw new InvalidOperationException("Invalid or expired token.");
+            throw new InvalidResetTokenException();
 
         var hash = BCrypt.Net.BCrypt.HashPassword(newPassword);
 
