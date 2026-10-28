@@ -129,7 +129,8 @@ Open [Swagger](http://localhost:5285/swagger) and use **Try it out**:
    tokens with the wrong signature, issuer, or audience also return **401**;
    these cases are covered by automated tests.
 7. `GET /api/users` returns **404**: the public account directory was removed.
-   The mobile prototype's user-list screen will need the planned sign-in flow.
+   The mobile prototype's user-list screen will need the planned sign-in flow. 
+   Since it is not in Swagger use http://localhost:5285/api/users 
 
 Refresh-token rotation and password-reset delivery remain separate backlog
 work; this issue does not add refresh/revoke endpoints.
