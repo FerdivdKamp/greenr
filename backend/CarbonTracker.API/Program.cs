@@ -7,20 +7,9 @@ using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Filters;
 using System.Data;
 using System.Reflection;
-using System.Text;
 
 
 var builder = WebApplication.CreateBuilder(args);
-
-
-// Read JWT config (Configuration refers to appsettings.json and env vars)
-var jwtSection = builder.Configuration.GetSection("Jwt");
-var jwtKey = jwtSection["Key"] ?? throw new InvalidOperationException("Jwt:Key missing");
-var jwtIssuer = jwtSection["Issuer"] ?? "greenr";
-var jwtAudience = jwtSection["Audience"] ?? "greenr";
-
-
-var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
 
 // AuthN/Z
@@ -28,14 +17,18 @@ builder.Services
   .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
   .AddJwtBearer(options =>
   {
+      var jwtSection = builder.Configuration.GetSection("Jwt");
       options.TokenValidationParameters = new TokenValidationParameters
       {
           ValidateIssuer = true,
           ValidateAudience = true,
           ValidateIssuerSigningKey = true,
-          ValidIssuer = jwtIssuer,
-          ValidAudience = jwtAudience,
-          IssuerSigningKey = signingKey
+          ValidateLifetime = true,
+          ClockSkew = TimeSpan.Zero,
+          ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 },
+          ValidIssuer = jwtSection["Issuer"] ?? "greenr",
+          ValidAudience = jwtSection["Audience"] ?? "greenr",
+          IssuerSigningKey = JwtConfiguration.SigningKey(builder.Configuration)
       };
   });
 
@@ -103,6 +96,8 @@ builder.Services.AddSwaggerExamplesFromAssemblies(Assembly.GetExecutingAssembly(
 
 
 var app = builder.Build();
+// Validate after all configuration providers have been applied, before serving requests.
+_ = JwtConfiguration.SigningKey(app.Configuration);
 
 app.UseSwagger();
 app.UseSwaggerUI(o =>
@@ -113,6 +108,8 @@ app.UseSwaggerUI(o =>
     o.DocumentTitle = "CarbonTracker.API";
 });
 
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 app.Run();
 

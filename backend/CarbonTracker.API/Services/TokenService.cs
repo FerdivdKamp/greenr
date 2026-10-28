@@ -2,7 +2,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
-using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using CarbonTracker.API.Services.Interfaces;
 
@@ -16,8 +15,7 @@ public class TokenService : ITokenService
     public TokenService(IConfiguration cfg)
     {
         _cfg = cfg;
-        var secret = _cfg["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key missing");
-        _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+        _key = JwtConfiguration.SigningKey(cfg);
     }
 
     public string CreateAccessToken(Guid userId, string username)

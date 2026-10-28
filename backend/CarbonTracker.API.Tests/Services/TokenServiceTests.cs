@@ -1,4 +1,4 @@
-﻿namespace CarbonTracker.API.Tests.Services;
+namespace CarbonTracker.API.Tests.Services;
 
 using System;
 using System.Collections.Generic;
@@ -17,7 +17,7 @@ public class TokenServiceTests
     {
         var dict = new Dictionary<string, string?>
         {
-            ["Jwt:Key"] = "super-secret-test-key-1234567890-at-least-32-bytes",
+            ["Jwt:Key"] = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)),
             ["Jwt:Issuer"] = "greenr-issuer",
             ["Jwt:Audience"] = "greenr-audience",
             ["Jwt:AccessTokenMinutes"] = "5",
@@ -53,6 +53,16 @@ public class TokenServiceTests
         Action act = () => new TokenService(cfg);
         act.Should().Throw<InvalidOperationException>()
            .WithMessage("*Jwt:Key missing*");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("                                ")]
+    [InlineData("too-short")]
+    public void Ctor_Rejects_Blank_Or_Short_Key(string key)
+    {
+        var cfg = BuildConfig(new() { ["Jwt:Key"] = key });
+        Assert.Throws<InvalidOperationException>(() => new TokenService(cfg));
     }
 
     [Fact]

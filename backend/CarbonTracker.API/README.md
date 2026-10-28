@@ -1,4 +1,4 @@
-﻿## Introduction to the greenr backend
+## Introduction to the greenr backend
 
 
 ### Prerequisites and toolchain
@@ -36,7 +36,9 @@ in-memory database connection, plus controller and token-service checks.
 ### Run locally
 
 Initialise the database using [the database guide](../../database/README.md).
-Then start the API from its project directory so the relative database path
+Configure `Jwt:Key` in user secrets using the root
+[authentication setup and testing guide](../../README.md#authentication-setup-and-testing-issue-16),
+which also includes a manual Swagger checklist. Then start the API from its project directory so the relative database path
 resolves correctly:
 
 ```powershell
@@ -108,7 +110,7 @@ CarbonTracker.API/ # Main Web API project
 │ └── ItemDto.cs # Shape of Item returned/accepted by API
 ├── Controllers/ # API controllers (routes, request handling)
 │ ├── ItemsController.cs # Endpoints for items (/api/items)
-│ └── UsersController.cs # Endpoints for users (/api/users)
+│ └── AuthenticationController.cs # Register, login, and authenticated /api/auth/me
 ├── Mapping/ # Mapping logic between Models and DTOs
 │ └── ItemMapping.cs # Extension methods: Item ↔ ItemDto
 ├── Models/ # Domain/data models (DB-facing)
