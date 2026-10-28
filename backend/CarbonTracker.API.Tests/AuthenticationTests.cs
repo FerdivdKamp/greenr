@@ -188,6 +188,19 @@ public sealed class AuthenticationFactory : WebApplicationFactory<Program>
     public override async ValueTask DisposeAsync()
     {
         await base.DisposeAsync();
-        File.Delete(_database);
+        // TestServer can finish a response before its request scope has released
+        // the native DuckDB handle. Allow a short, bounded cleanup grace period.
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                File.Delete(_database);
+                break;
+            }
+            catch (IOException) when (attempt < 20)
+            {
+                await Task.Delay(50);
+            }
+        }
     }
 }

@@ -134,3 +134,71 @@ Open [Swagger](http://localhost:5285/swagger) and use **Try it out**:
 
 Refresh-token rotation and password-reset delivery remain separate backlog
 work; this issue does not add refresh/revoke endpoints.
+
+## Personal items setup and testing (issue #17)
+
+Apply the database migrations with `python database/dev_db.py init`, configure
+the signing key above, and start the API. All `/api/items` endpoints now require
+a bearer token and use its user ID. There is no public all-items endpoint.
+Client-supplied `userId` and `itemId` fields are ignored; create assigns a new
+ID, and update uses the ID in the URL. Existing clients must sign in first.
+
+| Endpoint | Result |
+| --- | --- |
+| `GET /api/items` | Your items, ordered by purchase date descending, unknown dates last. |
+| `GET /api/items/{id}` | Your item, or 404 for a missing item or another user's item. |
+| `POST /api/items` | Create your item; 201 with the saved item and a Location header. |
+| `PUT /api/items/{id}` | Replace your item's editable fields; 200 with the saved item, or 404. |
+| `DELETE /api/items/{id}` | Delete your item; 204, or 404. |
+| `GET /api/items/summary` | Your item count, total price, total recorded footprint, and breakdown by `useCase`. |
+
+Create and update use the same body (PUT replaces all editable fields):
+
+```json
+{
+  "itemName": "Bicycle",
+  "useCase": "Transport",
+  "price": 125.50,
+  "footprintKg": 12.345,
+  "dateOfPurchase": "2020-06-15"
+}
+```
+
+`itemName` is required, cannot be whitespace, and allows at most 50 characters.
+`useCase` allows at most 20 characters and defaults to an empty string; null is
+invalid. Names and use cases are trimmed when saved. `price` and `footprintKg`
+are required and nonnegative, with at most two and three decimal places and
+maximum values of 99999999.99 and 9999999.999 respectively. `dateOfPurchase`
+may be omitted or null for an unknown date; otherwise it must be a valid ISO
+date after 0001-01-01 and on or before today in UTC. Invalid input returns a
+400 validation problem with field errors.
+
+The summary returns `itemCount`, `totalPrice`, `totalFootprintKg`, and
+`byUseCase` (groups with `useCase` and the same three totals). An empty account
+has zero totals and an empty breakdown. Footprint totals simply add the stored
+kilograms; they do not estimate emissions or amortise purchases. Legacy null
+amounts count as zero, and null use cases join the empty use-case group.
+
+Manual Swagger check:
+
+1. Without authorization, call `GET /api/items` and `GET /api/items/summary`:
+   expect 401. Register and log in as account A using the authentication guide.
+2. Authorize as A, create the example item, and copy the returned `itemId`.
+   Check that list, get-by-ID, and summary include the saved values.
+3. Update the item and verify the list and summary reflect the new values.
+   Try a negative price, blank name, or future date: expect 400 field errors.
+4. Register/login as account B and replace Swagger's authorization with B's
+   access token. A's item must be absent from B's list and summary. Reading,
+   updating, or deleting A's item by ID must return 404.
+5. Authorize as A again, delete the item (204), and verify it is absent from
+   the list and summary. A second delete returns 404.
+
+Run the complete automated suite using the commands above, or just item tests:
+
+```powershell
+dotnet test backend/CarbonTracker.API/CarbonTracker.API.sln --disable-build-servers -m:1 --filter FullyQualifiedName~ItemsTests
+```
+
+The tests use real registration/login, HTTP endpoints, and an isolated DuckDB
+database with the canonical migrations. They cover CRUD, validation, summaries,
+missing/invalid owner claims, forged body IDs, and cross-user isolation.
