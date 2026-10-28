@@ -1,5 +1,10 @@
 namespace CarbonTracker.API.Services;
 
+public sealed class InvalidRefreshTokenException : Exception
+{
+    public InvalidRefreshTokenException() : base("Invalid or expired refresh token.") { }
+}
+
 public sealed class DuplicateAccountException : Exception
 {
     public DuplicateAccountException() : base("Username or email already exists.") { }

@@ -13,8 +13,11 @@
         // Creates & persists refresh token; returns access + refresh
         Task<(string AccessToken, string RefreshToken)> IssueTokensAsync(Guid userId, string username);
 
-        // Creates a reset token (generic even if email not found)
-        Task<string> CreatePasswordResetAsync(string email);
+        Task<(string AccessToken, string RefreshToken)> RefreshAsync(string refreshToken);
+        Task RevokeAsync(string refreshToken);
+
+        // Delivers out of band; never returns a token to the caller.
+        Task CreatePasswordResetAsync(string email);
 
         // Resets password using token
         Task ResetPasswordAsync(string token, string newPassword);

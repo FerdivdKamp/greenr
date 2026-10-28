@@ -44,6 +44,7 @@ builder.Services.AddScoped<IDbConnection>(_ =>
 
 builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddSingleton<ITokenService, TokenService>();
+builder.Services.AddSingleton<IPasswordResetDelivery, DevelopmentPasswordResetDelivery>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -98,6 +99,9 @@ builder.Services.AddSwaggerExamplesFromAssemblies(Assembly.GetExecutingAssembly(
 var app = builder.Build();
 // Validate after all configuration providers have been applied, before serving requests.
 _ = JwtConfiguration.SigningKey(app.Configuration);
+if (!app.Environment.IsDevelopment() &&
+    app.Services.GetRequiredService<IPasswordResetDelivery>() is DevelopmentPasswordResetDelivery)
+    app.Logger.LogWarning("Password reset delivery is disabled outside Development until a production delivery adapter is registered.");
 
 app.UseSwagger();
 app.UseSwaggerUI(o =>

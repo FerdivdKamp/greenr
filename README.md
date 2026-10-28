@@ -132,8 +132,7 @@ Open [Swagger](http://localhost:5285/swagger) and use **Try it out**:
    The mobile prototype's user-list screen will need the planned sign-in flow. 
    Since it is not in Swagger use http://localhost:5285/api/users 
 
-Refresh-token rotation and password-reset delivery remain separate backlog
-work; this issue does not add refresh/revoke endpoints.
+Refresh-token rotation, logout, and password-reset delivery are described below.
 
 ## Personal items setup and testing (issue #17)
 
@@ -202,3 +201,71 @@ dotnet test backend/CarbonTracker.API/CarbonTracker.API.sln --disable-build-serv
 The tests use real registration/login, HTTP endpoints, and an isolated DuckDB
 database with the canonical migrations. They cover CRUD, validation, summaries,
 missing/invalid owner claims, forged body IDs, and cross-user isolation.
+
+## Refresh tokens and password resets (issue #18)
+
+`POST /api/auth/refresh` accepts `{"refreshToken":"..."}` and returns the same
+`accessToken`/`refreshToken` shape as login. Replace both locally after success.
+The refresh credential is single use: rotation atomically revokes it and inserts
+its replacement. Unknown, expired, revoked, and replayed credentials return the
+same 401 problem. Simultaneous refreshes have at most one winner. Tokens expire
+after `Jwt:RefreshTokenDays` (14 by default); each rotation starts a new lifetime.
+Login and refresh responses have `Cache-Control: no-store`.
+
+`POST /api/auth/logout` accepts the same body and returns 204, including for an
+unknown, expired, or already revoked token. This revokes only the supplied
+refresh credential; other device sessions continue. Both endpoints accept the
+refresh credential without a bearer token so an expired access token does not
+prevent refresh/logout. Clear client credentials after logout. Already issued
+access JWTs remain valid until their expiry (`Jwt:AccessTokenMinutes`, default
+15 minutes); these endpoints do not maintain an access-token denylist.
+
+Only SHA-256 digests of refresh and reset credentials are stored in the existing
+`token` columns. No schema migration is needed. **Existing plaintext refresh and
+reset tokens stop working after this change**; sign in again or request a new
+reset token. All SQL credential lookups use the digest format with no plaintext
+fallback.
+
+`POST /api/auth/request-reset` accepts `{"email":"you@example.invalid"}` and
+always returns 200 with `If the email exists, a reset link will be sent.` for a
+valid email, including when delivery fails. It never returns a token. Known
+accounts get a cryptographically random, single-use credential valid for 30
+minutes. Delivery uses the email stored on the account, with case-insensitive
+lookup. Invalid email input still returns a 400 validation problem.
+
+The `IPasswordResetDelivery.DeliverAsync(email, token, expiresAtUtc)` adapter is
+the provider boundary. The bundled adapter logs the credential **only in the
+Development environment**, using the `DevelopmentPasswordResetDelivery` logger.
+Use local logs as a mail sandbox; treat them as secrets and do not forward them
+to shared telemetry. In Testing, Staging, Production, and other environments it
+delivers nothing and logs no credentials; startup warns that delivery is disabled.
+There is no public reset-token inspection endpoint or production response flag.
+Before enabling real recovery, replace the adapter registration with a durable
+mail queue/provider. Implementations must enqueue promptly, deliver only to the
+supplied stored email, and keep token-bearing content out of logs. Provider
+exceptions are suppressed to retain the generic response and logged without
+exception details or account information. Rate limiting and mail-queue operations
+must be configured before exposing a real delivery provider publicly.
+
+For a local Swagger check:
+
+1. Register/login, save the refresh credential, then call refresh. The new pair
+   works; replaying the old refresh credential returns 401.
+2. Logout with the new refresh credential (204). Refreshing it returns 401;
+   repeating logout still returns 204.
+3. In Development, request a reset for your account email. Copy the token from
+   the local log and call `POST /api/auth/reset` with
+   `{"token":"...","newPassword":"Changed-password-456"}`. Expect 200.
+4. The new password works; the old password fails. All outstanding reset tokens
+   and refresh credentials for that account now fail. Used, expired, and unknown
+   reset credentials return the same 400 problem. Existing access JWTs expire
+   naturally as described above.
+5. Request a reset for an unknown email and compare its generic response. Repeat
+   in Production: responses never expose tokens, and no credential is logged.
+
+Run the automated suite using the backend commands above, or filter with
+`--filter FullyQualifiedName~TokenLifecycleTests`. Tests cover rotation, replay,
+expiry, concurrent refresh, session-specific logout, hashed persistence, reset
+completion and session invalidation, validation, generic delivery-failure
+responses, and the adapter's environment guard. The reset design follows the
+[OWASP password-reset guidance](https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html).
