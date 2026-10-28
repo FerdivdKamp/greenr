@@ -50,6 +50,10 @@ Open http://localhost:5285/swagger, then start the desired client. Visual Studio
 can also start the API with F5; VS Code and Visual Studio can attach a debugger
 to an API started from the CLI.
 
+Item endpoints require login and only expose the signed-in user's data. See the
+root [personal items guide](../../README.md#personal-items-setup-and-testing-issue-17)
+for request limits, summary semantics, and a two-account Swagger checklist.
+
 ### Troubleshooting build cancellation
 
 BE-01 reproduced `MSB5021` with SDK 10.0.401 on Windows when running
