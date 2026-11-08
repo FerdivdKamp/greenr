@@ -25,6 +25,7 @@ public class AuthenticationController : ControllerBase
     [HttpPost("register")]
     [AllowAnonymous]
     [SwaggerOperation(Summary = "Register a new user")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest req)
     {
         try
@@ -41,6 +42,7 @@ public class AuthenticationController : ControllerBase
     [HttpPost("login")]
     [AllowAnonymous]
     [SwaggerOperation(Summary = "Login with username OR email + password")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<TokenResponse>> Login([FromBody] LoginRequest req)
     {
         var user = await _users.FindByIdentifierAsync(req.Identifier);
@@ -83,6 +85,7 @@ public class AuthenticationController : ControllerBase
     [HttpPost("refresh")]
     [AllowAnonymous]
     [SwaggerOperation(Summary = "Exchange a refresh token for a new access/refresh pair (single use)")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<TokenResponse>> Refresh([FromBody] RefreshTokenRequest req)
     {
         try

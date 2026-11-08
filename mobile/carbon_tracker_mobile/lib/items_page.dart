@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:convert';
 import 'dart:math';
+import 'main.dart' show apiBaseUrl;
 
 class Item {
   final String itemId;
@@ -36,7 +37,10 @@ class Item {
 }
 
 class ItemsPage extends StatefulWidget {
-  const ItemsPage({super.key});
+  const ItemsPage({super.key, required this.client, required this.accessToken, required this.onSignOut});
+  final http.Client client;
+  final String accessToken;
+  final VoidCallback onSignOut;
 
   @override
   _ItemsPageState createState() => _ItemsPageState();
@@ -52,13 +56,13 @@ class _ItemsPageState extends State<ItemsPage> {
   }
 
   Future<List<Item>> fetchItems() async {
-    final response = await http.get(Uri.parse('http://10.0.2.2:7285/api/items'));
+    final response = await widget.client.get(Uri.parse('$apiBaseUrl/api/items'), headers: {'Authorization': 'Bearer ${widget.accessToken}'});
 
     if (response.statusCode == 200) {
       final List<dynamic> body = json.decode(response.body);
       return body.map((json) => Item.fromJson(json)).toList();
     } else {
-      throw Exception('Failed to load items');
+      throw Exception(response.statusCode == 401 ? 'Session expired. Sign in again.' : 'Failed to load items.');
     }
   }
 
@@ -89,7 +93,7 @@ class _ItemsPageState extends State<ItemsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Items')),
+      appBar: AppBar(title: const Text('Items'), actions: [TextButton(onPressed: widget.onSignOut, child: const Text('Sign out'))]),
       body: FutureBuilder<List<Item>>(
         future: items,
         builder: (context, snapshot) {
