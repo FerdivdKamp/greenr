@@ -101,9 +101,9 @@ return (
             />
             <Tooltip 
               // formatter={(v: number) => `€${Number(v).toLocaleString()}/mo`}
-              formatter={(v: number, _name, entry: any) => [
+              formatter={(v: number, _name, entry: { payload?: { month?: number } }) => [
                 `${Number(v).toLocaleString()} €/mo`,
-                `Month ${entry.payload.month}`,
+                entry.payload?.month != null ? `Month ${entry.payload.month}` : "Month",
               ]} 
               />
             <Legend />
@@ -124,9 +124,9 @@ return (
             />
             <Tooltip 
               // formatter={(v: number) => `${Number(v).toLocaleString()} kg/mo`} 
-              formatter={(v: number, _name, entry: any) => [
+              formatter={(v: number, _name, entry: { payload?: { month?: number } }) => [
               `${Number(v).toLocaleString()} kg/mo`,
-                `Month ${entry.payload.month}`,
+                entry.payload?.month != null ? `Month ${entry.payload.month}` : "Month",
               ]}
               />
             <Legend />

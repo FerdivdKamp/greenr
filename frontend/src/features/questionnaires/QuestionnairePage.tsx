@@ -20,7 +20,7 @@ export default function QuestionnairePage() {
   const model = useMemo(() => {
     if (!dto) return null;
 
-    let def: any = dto.definition;
+    let def: unknown = dto.definition;
     if (typeof def === "string") {
       try {
         def = JSON.parse(def);

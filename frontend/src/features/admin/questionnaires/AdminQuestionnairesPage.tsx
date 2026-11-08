@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import type { QuestionnaireDto } from "../../questionnaires/types";
 import { useAllQuestionnaires, usePublishLatestInFamily } from "./adminQueries";
 
 export default function AdminQuestionnairesPage() {
@@ -6,7 +7,7 @@ export default function AdminQuestionnairesPage() {
   const publish = usePublishLatestInFamily();
 
   const families = useMemo(() => {
-    const map = new Map<string, { canonicalId: string; versions: any[] }>();
+    const map = new Map<string, { canonicalId: string; versions: QuestionnaireDto[] }>();
     (data ?? []).forEach(q => {
       const key = q.canonicalId;
       if (!map.has(key)) map.set(key, { canonicalId: key, versions: [] });

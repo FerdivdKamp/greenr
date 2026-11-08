@@ -11,11 +11,7 @@ Use an HTTP(S) origin without a path or trailing `/api`; leave it empty for the
 same-origin proxy. Restart Vite after changing it. Vite variables are embedded in
 the client bundle and must never contain secrets.
 
-Sign in with an existing account. Access and refresh tokens are kept in memory
-only and are lost on reload; an expired access token signs the user out. A full
-registration and persistent-session flow is tracked in issue #22. Sign-out
-attempts to revoke the refresh token and reports if the API cannot be reached.
-Run `npm run test` for the API client checks and `npm run build` for a production build.
+Run `npm run test` for the frontend checks and `npm run build` for a production build.
 
 
 To start locally
@@ -198,3 +194,18 @@ sequenceDiagram
     API-->>Proxy: 200 OK (JSON)
     Proxy-->>UI: 200 OK (JSON)
 ```
+
+## Web authentication
+
+Register at `/register` and sign in at `/login`. Sessions are stored in the browser's
+`sessionStorage`, so a reload in the same tab keeps the session; closing the tab
+ends local persistence. On a protected API 401, the client exchanges the refresh
+token once and retries the request. Sign-out clears local data immediately and
+attempts to revoke the refresh token on the server. If revocation fails, the UI
+reports it; an already issued access token remains valid until it expires.
+
+Both tokens are readable by JavaScript in the page. An XSS attack or a malicious
+extension can steal them; per-tab storage reduces persistence but does not protect
+against XSS. A server-managed session using secure HttpOnly cookies would reduce
+that exposure and would require backend and CSRF changes. Use HTTPS in deployment
+and avoid putting secrets in frontend environment variables.
