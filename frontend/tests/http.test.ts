@@ -59,3 +59,15 @@ describe("API requests", () => {
     await expect(http.get("/api/items")).rejects.toThrow("Could not connect to the API");
   });
 });
+
+it("rotates a refresh token once for concurrent expired requests", async () => {
+  sessionStore.set({ accessToken: "old", refreshToken: "refresh" });
+  const fetchMock = vi.fn(async (url: string, init: RequestInit) => {
+    if (url.endsWith("/api/auth/refresh")) return new Response('{"accessToken":"new","refreshToken":"rotated"}', { status: 200 });
+    return (init.headers as Headers).get("Authorization") === "Bearer old" ? new Response("", { status: 401 }) : new Response('[]', { status: 200 });
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  await Promise.all([http.get("/api/items"), http.get("/api/items")]);
+  expect(fetchMock.mock.calls.filter(call => call[0].endsWith("/api/auth/refresh"))).toHaveLength(1);
+  expect(sessionStore.getSnapshot().session?.refreshToken).toBe("rotated");
+});
