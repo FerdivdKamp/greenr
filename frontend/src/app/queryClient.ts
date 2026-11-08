@@ -4,6 +4,7 @@
 
 // Import the QueryClient class from React Query
 import { QueryClient } from "@tanstack/react-query";
+import { ApiError } from "../lib/http";
 
 // Create a single instance of QueryClient for the whole app.
 // Think of this as the "store" that holds cached API responses.
@@ -13,6 +14,7 @@ export const queryClient = new QueryClient({
       // By default, React Query refetches data when you focus the browser window.
       // We disable that here to avoid surprises (e.g., leaving and coming back triggers fetch).
       refetchOnWindowFocus: false,
+      retry: (failureCount, error) => !(error instanceof ApiError && error.status < 500) && failureCount < 2,
     },
   },
 });

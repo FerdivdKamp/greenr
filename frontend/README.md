@@ -1,5 +1,22 @@
 # React + TypeScript + Vite
 
+## Local API configuration
+
+Run `npm install`, then `npm run dev` from `frontend`. Start the backend with
+its `http` launch profile as described in the [client connection guide](../backend/CarbonTracker.API/README.md#connecting-clients-in-development).
+By default the Vite server at `http://localhost:5173` proxies `/api` to
+`http://localhost:5285`. Copy `.env.example` to `.env.local` if you need to
+configure a different API origin, for example `VITE_API_BASE_URL=http://localhost:5285`.
+Use an HTTP(S) origin without a path or trailing `/api`; leave it empty for the
+same-origin proxy. Restart Vite after changing it. Vite variables are embedded in
+the client bundle and must never contain secrets.
+
+Sign in with an existing account. Access and refresh tokens are kept in memory
+only and are lost on reload; an expired access token signs the user out. A full
+registration and persistent-session flow is tracked in issue #22. Sign-out
+attempts to revoke the refresh token and reports if the API cannot be reached.
+Run `npm run test` for the API client checks and `npm run build` for a production build.
+
 
 To start locally
 ```

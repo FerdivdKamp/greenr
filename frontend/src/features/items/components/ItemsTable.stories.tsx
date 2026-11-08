@@ -3,8 +3,8 @@ import { ItemsTable } from "./ItemsTable";
 import type { Item } from "../types";
 
 const demo: Item[] = [
-  { itemId: "1", itemName: "Laptop", useCase: "Work", price: 999.99, footprintKG: 120, dateOfPurchase: "2024-10-01" },
-  { itemId: "2", itemName: "Bicycle", useCase: "Commute", price: 450, footprintKG: 25, dateOfPurchase: "2023-06-12" },
+  { itemId: "1", itemName: "Laptop", useCase: "Work", price: 999.99, footprintKg: 120, dateOfPurchase: "2024-10-01" },
+  { itemId: "2", itemName: "Bicycle", useCase: "Commute", price: 450, footprintKg: 25, dateOfPurchase: "2023-06-12" },
 ];
 
 const meta: Meta<typeof ItemsTable> = {
