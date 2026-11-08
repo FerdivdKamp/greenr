@@ -1,114 +1,77 @@
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'items_page.dart';
 
-import 'items_page.dart'; // ✅ Make sure this file exists
+const apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:7285');
 
-void main() => runApp(CarbonTrackerApp());
+void main() => runApp(const CarbonTrackerApp());
 
-class CarbonTrackerApp extends StatelessWidget {
-  const CarbonTrackerApp({super.key});
-
+class CarbonTrackerApp extends StatefulWidget {
+  const CarbonTrackerApp({super.key, this.client});
+  final http.Client? client;
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Carbon Tracker',
-      theme: ThemeData(primarySwatch: Colors.green),
-      home: UserListScreen(), // ✅ This is what was missing
-    );
-  }
+  State<CarbonTrackerApp> createState() => _CarbonTrackerAppState();
 }
 
-class User {
-  final String userId;
-  final String email;
-  final String firstName;
-
-  User({
-    required this.userId,
-    required this.email,
-    required this.firstName,
-  });
-
-  factory User.fromJson(Map<String, dynamic> json) {
-    return User(
-      userId: json['userId'],
-      email: json['email'],
-      firstName: json['firstName'],
-    );
-  }
-}
-
-class UserListScreen extends StatefulWidget {
-  const UserListScreen({super.key});
+class _CarbonTrackerAppState extends State<CarbonTrackerApp> {
+  late final http.Client client = widget.client ?? http.Client();
+  final identifier = TextEditingController();
+  final password = TextEditingController();
+  String? accessToken;
+  String? refreshToken;
+  String? error;
+  bool busy = false;
 
   @override
-  _UserListScreenState createState() => _UserListScreenState();
-}
-
-class _UserListScreenState extends State<UserListScreen> {
-  late Future<List<User>> users;
-
-  @override
-  void initState() {
-    super.initState();
-    users = fetchUsers();
+  void dispose() {
+    identifier.dispose();
+    password.dispose();
+    if (widget.client == null) client.close();
+    super.dispose();
   }
 
-  Future<List<User>> fetchUsers() async {
-    final response = await http.get(Uri.parse('http://10.0.2.2:7285/api/users'));
+  Future<void> login() async {
+    setState(() { busy = true; error = null; });
+    try {
+      final response = await client.post(Uri.parse('$apiBaseUrl/api/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'identifier': identifier.text.trim(), 'password': password.text}));
+      if (!mounted) return;
+      if (response.statusCode != 200) {
+        setState(() => error = 'Sign-in failed. Check your credentials and try again.');
+      } else {
+        final tokens = jsonDecode(response.body) as Map<String, dynamic>;
+        setState(() { accessToken = tokens['accessToken'] as String; refreshToken = tokens['refreshToken'] as String; password.clear(); });
+      }
+    } catch (_) {
+      if (mounted) setState(() => error = 'Could not connect to the API.');
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
 
-    if (response.statusCode == 200) {
-      List<dynamic> body = json.decode(response.body);
-      return body.map((json) => User.fromJson(json)).toList();
-    } else {
-      throw Exception('Failed to load users');
+  Future<void> logout() async {
+    final token = refreshToken;
+    setState(() { accessToken = null; refreshToken = null; });
+    if (token != null) {
+      try {
+        await client.post(Uri.parse('$apiBaseUrl/api/auth/logout'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'refreshToken': token}));
+      } catch (_) { /* Local sign-out still succeeds if the server is unavailable. */ }
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Users')),
-      body: Column(
-        children: [
-          Expanded(
-            child: FutureBuilder<List<User>>(
-              future: users,
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  return ListView.builder(
-                    itemCount: snapshot.data!.length,
-                    itemBuilder: (context, index) {
-                      final user = snapshot.data![index];
-                      return ListTile(
-                        title: Text(user.firstName),
-                        subtitle: Text(user.email),
-                      );
-                    },
-                  );
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                } else {
-                  return const Center(child: CircularProgressIndicator());
-                }
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              child: const Text('Show Items'),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => ItemsPage()),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => MaterialApp(
+    title: 'Carbon Tracker', theme: ThemeData(primarySwatch: Colors.green),
+    home: accessToken != null
+      ? ItemsPage(client: client, accessToken: accessToken!, onSignOut: logout)
+      : Scaffold(appBar: AppBar(title: const Text('Sign in')), body: Center(child: SingleChildScrollView(child: Padding(
+          padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(controller: identifier, decoration: const InputDecoration(labelText: 'Username or email')),
+            TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'Password')),
+            if (error != null) Text(error!),
+            ElevatedButton(onPressed: busy ? null : login, child: Text(busy ? 'Signing in...' : 'Sign in')),
+          ]))))),
+  );
 }

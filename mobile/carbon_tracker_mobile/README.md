@@ -1,88 +1,36 @@
-﻿# carbon_tracker_mobile
+﻿# Carbon Tracker mobile
 
-A Flutter app to help users monitor and reduce their carbon footprint.
+A Flutter app for viewing your carbon footprint items.
 
-## 🚀 Getting Started
+## Prerequisites
 
-This project is the starting point for a Flutter application. If you're new to Flutter, check out:
+- Install the [Flutter SDK](https://docs.flutter.dev/get-started/install) and Android development tools.
+- Create an Android Virtual Device in Android Studio, or connect an Android device.
+- Set up and start the API and create an account. See the [backend setup and client connection guide](../../backend/CarbonTracker.API/README.md#connecting-clients-in-development) and the [authentication setup guide](../../README.md#authentication-setup-and-testing-issue-16).
 
-- [Write your first Flutter app (Codelab)](https://docs.flutter.dev/get-started/codelab)
-- [Flutter Cookbook (Sample Recipes)](https://docs.flutter.dev/cookbook)
-- [Flutter Documentation](https://docs.flutter.dev/) – includes tutorials, samples, and API references.
+## Run on an Android emulator
 
----
-
-## 🛠️ Setup Instructions
-
-### 1. Prerequisites
-
-- [Flutter SDK](https://flutter.dev/docs/get-started/install)
-- Android Studio or Visual Studio Code with Flutter/Dart plugins
-- An Android Virtual Device (AVD) created via Android Studio’s Device Manager
-
-### 2. Add Android Emulator to PATH
-
-Ensure the Android emulator CLI is available by adding this directory to your system `PATH`:
-
-`# carbon_tracker_mobile
-
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-
-
-
-## Steps to get it running
-
-Have `C:\Users\[username]\AppData\Local\Android\Sdk\emulator added in your path.
+From this directory, install dependencies and start the app:
 
 ```powershell
-emulator -list-avds
-```
-
-
-
-```powershell
-emulator -avd Pixel_6_API_34_2
-```
-_Use the name of the phone you created in Android Studio__
-
-This will start the emulator
-
-`C:\Users<your-username>\AppData\Local\Android\Sdk\emulator`
-
-Replace `<your-username>` with your actual Windows username.
-
-Then restart your terminal and test:
-
-```powershell
-emulator -list-avds
-
-emulator -avd Pixel_6_API_34_2
-```
-
-Once the emulator is running, start your app:
-
-```bash
+flutter pub get
+flutter devices
 flutter run
 ```
-_Make sure the backend is already running_
 
+Start an emulator first using Android Studio's Device Manager. Alternatively, add the Android SDK's `emulator` directory to your PATH and run:
 
-Adding a package when adding directly to pubspec.yaml does not work
-https://pub.dev/packages
+```powershell
+emulator -list-avds
+emulator -avd <avd-name>
+```
 
-```bash
-flutter pub add fl_chart
+The default API address is `http://10.0.2.2:7285`, which maps from the Android emulator to the host. For a physical device or another host, set `API_BASE_URL` as described in the backend connection guide. Local HTTP is enabled for Android debug builds; use HTTPS for deployed clients.
+
+Sign in with an existing username or email and password to load items. The session is kept in memory, so sign in again after restarting the app. If the session expires, sign out and sign in again.
+
+## Test
+
+```powershell
+flutter test
 ```

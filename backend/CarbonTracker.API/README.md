@@ -204,3 +204,21 @@ Lifetimes:
 - Transient: A new instance is created each time it is requested. Suitable for lightweight, stateless services.
 - Scoped: A single instance is created per request. Useful for services that need to maintain state within a request but not across requests.
 - Singleton: A single instance is created and shared throughout the application's lifetime. Ideal for services that maintain global state or configuration.
+
+### Connecting clients in development
+
+Start the API with the `http` launch profile (ports 5285 and 7285). The web app
+runs at `http://localhost:5173` and proxies `/api` to `http://localhost:5285`;
+set `VITE_API_BASE_URL` to `http://localhost:5285` for direct requests instead.
+Direct browser requests are allowed from localhost or 127.0.0.1 on port 5173
+only in Development. Production does not enable this CORS policy.
+
+The Android emulator uses `http://10.0.2.2:7285`. For a physical device,
+start the API listening on a network interface (for example, set
+`ASPNETCORE_URLS=http://0.0.0.0:7285` and `ASPNETCORE_ENVIRONMENT=Development`,
+then run with `--no-launch-profile`),
+allow the port through the host firewall, and use the host's LAN address:
+`flutter run --dart-define=API_BASE_URL=http://192.168.1.10:7285`.
+Replace the example address with your host address. Android debug builds permit
+HTTP for local development; deployed clients should use HTTPS. Sign in and send
+`Authorization: Bearer <access token>` for protected endpoints. The mobile app signs in with an existing account and keeps its session in memory; sign in again after restarting the app.

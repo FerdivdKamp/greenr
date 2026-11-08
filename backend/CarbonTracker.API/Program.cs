@@ -1,4 +1,5 @@
 using CarbonTracker.API.Services;
+using CarbonTracker.API.Swagger;
 using CarbonTracker.API.Services.Interfaces;
 using DuckDB.NET.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -46,7 +47,9 @@ builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddSingleton<ITokenService, TokenService>();
 builder.Services.AddSingleton<IPasswordResetDelivery, DevelopmentPasswordResetDelivery>();
 
-builder.Services.AddControllers();
+builder.Services.AddProblemDetails();
+builder.Services.AddCors(options => options.AddPolicy("DevelopmentWeb", policy => policy.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173").AllowAnyHeader().AllowAnyMethod()));
+builder.Services.AddControllers(options => options.Filters.Add<ApiErrorFilter>());
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>
@@ -60,6 +63,7 @@ builder.Services.AddSwaggerGen(c =>
     });
 
     c.EnableAnnotations();
+    c.OperationFilter<ApiOperationFilter>();
 
     // Include XML comments if they exist (won't error if missing)
     var xml = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
@@ -75,7 +79,7 @@ builder.Services.AddSwaggerGen(c =>
     var securityScheme = new OpenApiSecurityScheme
     {
         Name = "Authorization",
-        Description = "Enter: Bearer {your JWT access token}",
+        Description = "Enter your JWT access token.",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.Http,
         Scheme = "bearer",
@@ -87,10 +91,7 @@ builder.Services.AddSwaggerGen(c =>
         }
     };
     c.AddSecurityDefinition("Bearer", securityScheme);
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        { securityScheme, Array.Empty<string>() }
-    });
+
 });
 
 builder.Services.AddSwaggerExamplesFromAssemblies(Assembly.GetExecutingAssembly());
@@ -112,6 +113,8 @@ app.UseSwaggerUI(o =>
     o.DocumentTitle = "CarbonTracker.API";
 });
 
+app.UseStatusCodePages(async context => await Results.Problem(statusCode: context.HttpContext.Response.StatusCode).ExecuteAsync(context.HttpContext));
+if (app.Environment.IsDevelopment()) app.UseCors("DevelopmentWeb");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
