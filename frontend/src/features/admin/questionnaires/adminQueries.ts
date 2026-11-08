@@ -16,10 +16,10 @@ export const usePublishLatestInFamily = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: publishLatestInFamily,
-    onSuccess: (_,_canonicalId) => {
+    onSuccess: () => {
       // refresh admin list + any consumer of "latest"
       qc.invalidateQueries({ queryKey: ["admin","questionnaires","all"] });
-      qc.invalidateQueries({ predicate: (q) => (q.queryKey as any[])[0] === "questionnaire" });
+      qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === "questionnaire" });
     }
   });
 };
