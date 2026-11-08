@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test": "vitest run --config vitest.unit.config.ts",
     "preview": "vite preview",
     "docs": "typedoc",
     "docs:open": "npx http-server typedoc -p 5050 -c-",

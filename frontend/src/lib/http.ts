@@ -1,43 +1,66 @@
-// A small wrapper around fetch() to simplify making API calls.
-// Benefits:
-// - Prefixes all requests with our API base URL
-// - Ensures JSON parsing
-// - Throws clear errors if the response is not ok
+import { env } from "./env";
+import { sessionStore } from "./session";
 
-import { requireEnv } from "./env";
+type RequestOptions = RequestInit & { anonymous?: boolean };
 
-const { API_BASE_URL } = requireEnv();
-
-/**
- * Make a request and parse JSON.
- * - Prefixes path with API_BASE_URL
- * - Adds JSON headers (unless overridden)
- * - Throws on non-2xx responses
- */
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
-    ...init,
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`${res.status} ${res.statusText}${text ? `: ${text}` : ""}`);
+export class ApiError extends Error {
+  readonly status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
   }
+}
 
-  // Handle empty body gracefully (e.g., 204 No Content)
-  if (res.status === 204) return undefined as unknown as T;
+async function errorMessage(response: Response): Promise<string> {
+  const text = await response.text();
+  if (text) {
+    try {
+      const body: unknown = JSON.parse(text);
+      if (typeof body === "string") return body;
+      if (body && typeof body === "object") {
+        const problem = body as { title?: unknown; detail?: unknown; errors?: unknown };
+        const errors = problem.errors && typeof problem.errors === "object"
+          ? Object.values(problem.errors).flat().filter((value): value is string => typeof value === "string")
+          : [];
+        return [problem.detail, ...errors, problem.title].find(value => typeof value === "string" && value.trim()) as string || `Request failed (${response.status}).`;
+      }
+    } catch {
+      if (!text.trimStart().startsWith("<")) return text;
+    }
+  }
+  return `Request failed (${response.status}).`;
+}
 
-  return (await res.json()) as T;
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const { anonymous = false, ...init } = options;
+  const session = sessionStore.getSnapshot().session;
+  const headers = new Headers(init.headers);
+  if (init.body != null && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  if (!anonymous && session) headers.set("Authorization", `Bearer ${session.accessToken}`);
+
+  let response: Response;
+  try {
+    response = await fetch(`${env.API_BASE_URL}${path}`, { ...init, headers });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") throw error;
+    throw new Error("Could not connect to the API. Check that it is running and try again.");
+  }
+  if (!response.ok) {
+    if (response.status === 401 && !anonymous && sessionStore.getSnapshot().session === session) {
+      sessionStore.set(null, "Your session has expired or you are signed out. Sign in again.");
+    }
+    throw new ApiError(response.status, await errorMessage(response));
+  }
+  if (response.status === 204) return undefined as T;
+  return response.json() as Promise<T>;
 }
 
 export const http = {
-  get:  <T>(p: string, init?: RequestInit) => request<T>(p, init),
-  post: <T>(p: string, body?: unknown, init?: RequestInit) =>
-    request<T>(p, { method: "POST", body: JSON.stringify(body ?? {}), ...init }),
-  put:  <T>(p: string, body?: unknown, init?: RequestInit) =>
-    request<T>(p, { method: "PUT", body: JSON.stringify(body ?? {}), ...init }),
-  del:  <T>(p: string, init?: RequestInit) =>
-    request<T>(p, { method: "DELETE", ...init }),
+  get: <T>(path: string, options?: RequestOptions) => request<T>(path, options),
+  post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    request<T>(path, { ...options, method: "POST", body: JSON.stringify(body ?? {}) }),
+  put: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    request<T>(path, { ...options, method: "PUT", body: JSON.stringify(body ?? {}) }),
+  del: <T>(path: string, options?: RequestOptions) => request<T>(path, { ...options, method: "DELETE" }),
 };
-

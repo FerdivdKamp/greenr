@@ -86,7 +86,7 @@ export default function ItemsPage() {
           {showTimeline ? "Hide item timeline" : "Show item timeline"}
         </Button>
 
-        {error && <span className="text-red-400 text-sm">Failed to load.</span>}
+        {error && <span role="alert" className="text-red-400 text-sm">{error.message}</span>}
       </div>
 
       {/* Use-case filter */}

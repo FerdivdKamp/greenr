@@ -31,16 +31,17 @@ export default function QuestionnairePage() {
 
     const m = new SurveyModel(def);
     m.onComplete.add(async (s) => {
-      await submit.mutateAsync({
-        userId: null, // fill if you have auth
-        answers: s.data,
-      });
+      try {
+        await submit.mutateAsync({ userId: null, answers: s.data });
+      } catch {
+        // React Query exposes the failure below the survey.
+      }
     });
     return m;
   }, [dto, submit]);
 
   if (isLoading) return <div className="p-6">Loading questionnaire…</div>;
-  if (error) return <div className="p-6 text-red-600">Failed to load questionnaire</div>;
+  if (error) return <div role="alert" className="p-6 text-red-600">{error.message}</div>;
   if (!model) return <div className="p-6">No questionnaire definition</div>;
 
   return (

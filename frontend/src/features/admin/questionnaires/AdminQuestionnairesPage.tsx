@@ -18,7 +18,7 @@ export default function AdminQuestionnairesPage() {
   }, [data]);
 
   if (isLoading) return <div className="p-6">Loading…</div>;
-  if (error) return <div className="p-6 text-red-600">Failed to load.</div>;
+  if (error) return <div role="alert" className="p-6 text-red-600">{error.message}</div>;
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
@@ -42,8 +42,12 @@ export default function AdminQuestionnairesPage() {
                 disabled={!canPublish || publish.isPending}
                 onClick={async () => {
                   if (!confirm(`Publish latest (v${latest.version}) for this family?`)) return;
-                  await publish.mutateAsync(f.canonicalId);
-                  alert("Published.");
+                  try {
+                    await publish.mutateAsync(f.canonicalId);
+                    alert("Published.");
+                  } catch {
+                    // React Query exposes the failure below.
+                  }
                 }}
               >
                 {publish.isPending ? "Publishing…" : "Publish latest"}
@@ -61,6 +65,7 @@ export default function AdminQuestionnairesPage() {
           </div>
         );
       })}
+      {publish.isError && <p role="alert">{publish.error.message}</p>}
     </div>
   );
 }
