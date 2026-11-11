@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getLatestQuestionnaire, submitResponse } from "./api";
 import type { SubmitResponseRequest } from "./types";
 
@@ -14,8 +14,11 @@ export const useLatestQuestionnaire = (canonicalId: string) =>
     enabled: !!canonicalId, // don’t run unless we have an ID
   });
 
-export const useSubmitResponse = (questionnaireId: string) =>
-  useMutation({
+export const useSubmitResponse = (questionnaireId: string) => {
+  const client = useQueryClient();
+  return useMutation({
     mutationFn: (body: SubmitResponseRequest) =>
       submitResponse(questionnaireId, body),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["questionnaire-history"] }),
   });
+};

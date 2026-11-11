@@ -26,6 +26,20 @@ public class QuestionnaireController : ControllerBase
         _db = db;
     }
 
+    [HttpGet("responses/history")]
+    public IActionResult History()
+    {
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var owner) || owner == Guid.Empty)
+            return Unauthorized();
+        using var cmd = _db.CreateCommand();
+        cmd.CommandText = "SELECT r.id, r.submitted_at, q.title, q.version FROM response r JOIN questionnaire q ON q.id = r.questionnaire_id WHERE r.user_id = ? ORDER BY r.submitted_at DESC";
+        cmd.Parameters.Add(new DuckDBParameter { Value = owner });
+        using var reader = cmd.ExecuteReader();
+        var results = new List<object>();
+        while (reader.Read()) results.Add(new { id = reader["id"].ToString(), title = reader["title"].ToString(), version = Convert.ToInt32(reader["version"]), submittedAt = Convert.ToDateTime(reader["submitted_at"]) });
+        return Ok(results);
+    }
+
     private string? ValidatePublishTarget(IDbTransaction tx, Guid id)
     {
         using var command = _db.CreateCommand();
