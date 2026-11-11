@@ -91,6 +91,28 @@ public sealed class QuestionnaireTests : IClassFixture<AuthenticationFactory>
     }
 
     [Fact]
+    public async Task History_Returns_Only_The_Signed_In_Users_Responses()
+    {
+        var (admin, _) = await SignIn(true);
+        using var adminClient = admin;
+        var draft = await Create(admin);
+        await admin.PostAsync($"/api/questionnaires/{draft.Id}/publish", null);
+        var (first, _) = await SignIn();
+        using var firstClient = first;
+        var (second, _) = await SignIn();
+        using var secondClient = second;
+        var response = await first.PostAsJsonAsync($"/api/questionnaires/{draft.Id}/responses", new { answers = new { days = 2 } });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var id = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        var firstHistory = await first.GetFromJsonAsync<JsonElement[]>("/api/questionnaires/responses/history");
+        Assert.Contains(firstHistory!, row => row.GetProperty("id").GetGuid() == id);
+        var secondHistory = await second.GetFromJsonAsync<JsonElement[]>("/api/questionnaires/responses/history");
+        Assert.DoesNotContain(secondHistory!, row => row.GetProperty("id").GetGuid() == id);
+        using var anonymous = _factory.CreateClient();
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync("/api/questionnaires/responses/history")).StatusCode);
+    }
+
+    [Fact]
     public async Task Versioning_Keeps_Active_Until_Publish_And_Supports_Family_Selectors_And_Rollback()
     {
         var (client, _) = await SignIn(true);

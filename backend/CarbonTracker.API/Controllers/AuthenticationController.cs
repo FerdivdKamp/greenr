@@ -119,6 +119,6 @@ public class AuthenticationController : ControllerBase
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var username = User.Identity?.Name;
-        return Ok(new { userId, username });
+        return Ok(new { userId, username, questionnaireAdmin = User.IsInRole("QuestionnaireAdmin") });
     }
 }

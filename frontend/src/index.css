@@ -12,3 +12,8 @@ button { width: fit-content; padding: .6rem 1rem; font: inherit; color: #142b19;
 button:disabled { opacity: .65; cursor: wait; }
 :focus-visible { outline: 3px solid #ffe17d; outline-offset: 3px; }
 [role="alert"] { color: #fff0ba; }
+
+form { max-width: 36rem; }
+input, textarea, select { box-sizing: border-box; max-width: 100%; font: inherit; }
+select, textarea { color: #142b19; background: white; }
+li { overflow-wrap: anywhere; margin-block: .5rem; }

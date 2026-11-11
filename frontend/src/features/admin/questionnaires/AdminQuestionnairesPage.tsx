@@ -27,7 +27,7 @@ export default function AdminQuestionnairesPage() {
       {families.map(f => {
         const latest = f.versions[0];
         const active = f.versions.find(v => v.status === "active");
-        const canPublish = latest && active && latest.id !== active.id;
+        const canPublish = latest && latest.id !== active?.id;
 
         return (
           <div key={f.canonicalId} className="border rounded-xl p-4">
