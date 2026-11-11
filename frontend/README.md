@@ -209,3 +209,7 @@ extension can steal them; per-tab storage reduces persistence but does not prote
 against XSS. A server-managed session using secure HttpOnly cookies would reduce
 that exposure and would require backend and CSRF changes. Use HTTPS in deployment
 and avoid putting secrets in frontend environment variables.
+
+## Frontend quality checks
+
+From `frontend`, run `npm ci`, then `npm run lint`, `npm run build` (includes TypeScript checks), and `npm test`. The tests cover authentication, HTTP handling, item changes, and questionnaire states. Run `npm run format -- <files>` to format changed files with Prettier. Run `npm run storybook` to inspect the button and item table states, or `npm run build-storybook` to verify a static build. The generated `typedoc/` and `storybook-static/` directories are local build output.

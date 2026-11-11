@@ -1,9 +1,10 @@
-﻿// @vitest-environment jsdom
+// @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import QuestionnairePage from "../src/features/questionnaires/QuestionnairePage";
+import { AdminQuestionnairesGuard } from "../src/features/admin/questionnaires/AdminQuestionnairesGuard";
 import QuestionnaireListPage from "../src/features/questionnaires/QuestionnaireListPage";
 
 vi.mock("survey-react-ui", () => ({ Survey: ({ model }: { model: { onComplete: { fire: (sender: unknown) => void } } }) => <button onClick={() => model.onComplete.fire({ data: { answer: "yes" } })}>Finish survey</button> }));
@@ -33,4 +34,12 @@ it("keeps answers available after a failed submission and retries", async () => 
   fireEvent.click(screen.getByRole("button", { name: "Submit answers" }));
   expect((await screen.findByRole("status")).textContent).toContain("saved");
   expect(JSON.parse(fetchMock.mock.calls[2][1].body).answers).toEqual({ answer: "yes" });
+});
+
+it("denies the administration route to an ordinary account", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response('{"questionnaireAdmin":false}', { status: 200 })));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(<QueryClientProvider client={client}><AdminQuestionnairesGuard /></QueryClientProvider>);
+  expect((await screen.findByRole("alert")).textContent).toContain("do not have access");
+  expect(screen.queryByRole("button", { name: "Create draft" })).toBeNull();
 });
