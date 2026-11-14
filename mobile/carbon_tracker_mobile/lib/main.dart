@@ -1,9 +1,11 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'items_page.dart';
+import 'session_client.dart';
 
-const apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:7285');
+const apiBaseUrl = String.fromEnvironment('API_BASE_URL',
+    defaultValue: 'http://10.0.2.2:7285');
 
 void main() => runApp(const CarbonTrackerApp());
 
@@ -20,6 +22,7 @@ class _CarbonTrackerAppState extends State<CarbonTrackerApp> {
   final password = TextEditingController();
   String? accessToken;
   String? refreshToken;
+  SessionClient? session;
   String? error;
   bool busy = false;
 
@@ -32,17 +35,40 @@ class _CarbonTrackerAppState extends State<CarbonTrackerApp> {
   }
 
   Future<void> login() async {
-    setState(() { busy = true; error = null; });
+    setState(() {
+      busy = true;
+      error = null;
+    });
     try {
-      final response = await client.post(Uri.parse('$apiBaseUrl/api/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'identifier': identifier.text.trim(), 'password': password.text}));
+      final response = await client.post(
+          Uri.parse('$apiBaseUrl/api/auth/login'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'identifier': identifier.text.trim(),
+            'password': password.text
+          }));
       if (!mounted) return;
       if (response.statusCode != 200) {
-        setState(() => error = 'Sign-in failed. Check your credentials and try again.');
+        setState(() =>
+            error = 'Sign-in failed. Check your credentials and try again.');
       } else {
         final tokens = jsonDecode(response.body) as Map<String, dynamic>;
-        setState(() { accessToken = tokens['accessToken'] as String; refreshToken = tokens['refreshToken'] as String; password.clear(); });
+        setState(() {
+          accessToken = tokens['accessToken'] as String;
+          refreshToken = tokens['refreshToken'] as String;
+          session = SessionClient(
+              client, apiBaseUrl, accessToken!, refreshToken!, () {
+            if (mounted) {
+              setState(() {
+                accessToken = null;
+                refreshToken = null;
+                session = null;
+                error = 'Session expired. Please sign in again.';
+              });
+            }
+          });
+          password.clear();
+        });
       }
     } catch (_) {
       if (mounted) setState(() => error = 'Could not connect to the API.');
@@ -52,26 +78,45 @@ class _CarbonTrackerAppState extends State<CarbonTrackerApp> {
   }
 
   Future<void> logout() async {
-    final token = refreshToken;
-    setState(() { accessToken = null; refreshToken = null; });
-    if (token != null) {
-      try {
-        await client.post(Uri.parse('$apiBaseUrl/api/auth/logout'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'refreshToken': token}));
-      } catch (_) { /* Local sign-out still succeeds if the server is unavailable. */ }
-    }
+    final current = session;
+    setState(() {
+      accessToken = null;
+      refreshToken = null;
+      session = null;
+      error = null;
+    });
+    await current?.signOut();
   }
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'Carbon Tracker', theme: ThemeData(primarySwatch: Colors.green),
-    home: accessToken != null
-      ? ItemsPage(client: client, accessToken: accessToken!, onSignOut: logout)
-      : Scaffold(appBar: AppBar(title: const Text('Sign in')), body: Center(child: SingleChildScrollView(child: Padding(
-          padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: identifier, decoration: const InputDecoration(labelText: 'Username or email')),
-            TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'Password')),
-            if (error != null) Text(error!),
-            ElevatedButton(onPressed: busy ? null : login, child: Text(busy ? 'Signing in...' : 'Sign in')),
-          ]))))),
-  );
+        title: 'Carbon Tracker',
+        theme: ThemeData(primarySwatch: Colors.green),
+        home: accessToken != null
+          ? ItemsPage(client: session!, onSignOut: logout)
+            : Scaffold(
+                appBar: AppBar(title: const Text('Sign in')),
+                body: Center(
+                    child: SingleChildScrollView(
+                        child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  TextField(
+                                      controller: identifier,
+                                      decoration: const InputDecoration(
+                                          labelText: 'Username or email')),
+                                  TextField(
+                                      controller: password,
+                                      obscureText: true,
+                                      decoration: const InputDecoration(
+                                          labelText: 'Password')),
+                                  if (error != null) Text(error!),
+                                  ElevatedButton(
+                                      onPressed: busy ? null : login,
+                                      child: Text(
+                                          busy ? 'Signing in...' : 'Sign in')),
+                                ]))))),
+      );
 }
