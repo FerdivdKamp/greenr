@@ -1,6 +1,7 @@
 # Carbon Tracker mobile
 
-A Flutter app for viewing your carbon footprint items.
+A Flutter app for viewing your carbon footprint items. Start with the
+[root developer guide](../../README.md) for the complete local setup.
 
 ## Prerequisites
 
