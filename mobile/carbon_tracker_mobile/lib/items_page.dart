@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import 'main.dart' show apiBaseUrl;
+
+const websiteBaseUrl = String.fromEnvironment('WEBSITE_BASE_URL');
 
 class Item {
   final String itemId, itemName, useCase;
@@ -26,10 +29,7 @@ class Item {
 }
 
 class ItemsPage extends StatefulWidget {
-  const ItemsPage(
-      {super.key,
-      required this.client,
-      required this.onSignOut});
+  const ItemsPage({super.key, required this.client, required this.onSignOut});
   final http.Client client;
   final VoidCallback onSignOut;
   @override
@@ -71,6 +71,50 @@ class _ItemsPageState extends State<ItemsPage> {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
     }
+  }
+
+  Future<void> openQuestionnaires() async {
+    final base = Uri.tryParse(websiteBaseUrl);
+    if (base == null ||
+        !base.hasAuthority ||
+        (base.scheme != 'https' && base.scheme != 'http') ||
+        base.userInfo.isNotEmpty ||
+        base.hasQuery ||
+        base.hasFragment) {
+      showError('The questionnaire website is not configured.');
+      return;
+    }
+    final uri = base.replace(
+        path: '${base.path.replaceAll(RegExp(r'/+$'), '')}/questionnaires');
+    try {
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        showError('Could not open the questionnaire website.');
+      }
+    } catch (_) {
+      showError('Could not open the questionnaire website.');
+    }
+  }
+
+  void showQuestionnaires() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Questionnaires'),
+        content: const Text(
+            'Questionnaires open on the greenr website. Sign in there to view and complete them.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                openQuestionnaires();
+              },
+              child: const Text('Open website')),
+        ],
+      ),
+    );
   }
 
   Future<void> edit([Item? item]) async {
@@ -132,6 +176,17 @@ class _ItemsPageState extends State<ItemsPage> {
       appBar: AppBar(title: const Text('Items'), actions: [
         TextButton(onPressed: widget.onSignOut, child: const Text('Sign out'))
       ]),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: 0,
+        onDestinationSelected: (index) {
+          if (index == 1) showQuestionnaires();
+        },
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
+          NavigationDestination(
+              icon: Icon(Icons.assignment_outlined), label: 'Questionnaires'),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
           onPressed: saving ? null : () => edit(),
           label: const Text('Add item'),

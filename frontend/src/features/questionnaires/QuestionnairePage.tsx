@@ -4,6 +4,7 @@ import { Survey } from "survey-react-ui";
 import { Model as SurveyModel } from "survey-core";
 import "survey-core/survey-core.css";
 import { useLatestQuestionnaire, useSubmitResponse } from "./queries";
+import { configureTravelDuration } from "./duration";
 
 export default function QuestionnairePage() {
   const { canonicalId = "" } = useParams();
@@ -16,6 +17,7 @@ export default function QuestionnairePage() {
       const definition = typeof dto.definition === "string" ? JSON.parse(dto.definition) : dto.definition;
       if (!definition || typeof definition !== "object" || Array.isArray(definition)) return null;
       const survey = new SurveyModel(definition);
+      configureTravelDuration(survey);
       survey.onComplete.add(s => setAnswers(s.data));
       return survey;
     } catch { return null; }

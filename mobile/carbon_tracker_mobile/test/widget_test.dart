@@ -30,6 +30,13 @@ void main() {
     await tester.tap(find.widgetWithText(ElevatedButton, 'Sign in'));
     await tester.pumpAndSettle();
     expect(find.text('Items'), findsOneWidget);
+    await tester.tap(find.text('Questionnaires'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Sign in there'), findsOneWidget);
+    await tester.tap(find.text('Open website'));
+    await tester.pumpAndSettle();
+    expect(find.text('The questionnaire website is not configured.'),
+        findsOneWidget);
     await tester.tap(find.text('Sign out'));
     await tester.pumpAndSettle();
     expect(find.text('Username or email'), findsOneWidget);
