@@ -213,3 +213,14 @@ and avoid putting secrets in frontend environment variables.
 ## Frontend quality checks
 
 From `frontend`, run `npm ci`, then `npm run lint`, `npm run build` (includes TypeScript checks), and `npm test`. The tests cover authentication, HTTP handling, item changes, and questionnaire states. Run `npm run format -- <files>` to format changed files with Prettier. Run `npm run storybook` to inspect the button and item table states, or `npm run build-storybook` to verify a static build. The generated `typedoc/` and `storybook-static/` directories are local build output.
+
+For Storybook browser tests, install Chromium once with `npx playwright install chromium --only-shell`, then run `npm run test:storybook`. Vitest 4 requires Node.js 20, 22, or 24 and later even-numbered releases; the installed frontend dependencies may require a more recent Node release. Node 22.19 or newer in the 22.x line is suitable for the current lockfile.
+
+To watch the Storybook tests run, install the full browser once with `npx playwright install chromium`, then run `npm run test:storybook:visible`. The window closes when the tests finish. To record traces, run `npm run test:storybook:trace`; Vitest saves `.trace.zip` files in `__traces__` folders beside the stories. Find them with `Get-ChildItem src -Recurse -Filter *.trace.zip`, then open one with `npx playwright show-trace <path-to-trace.zip>`.
+
+ ```shell
+ npx playwright show-trace "src/features/items/__traces__/ItemsPage.stories.tsx/storybook--chromium--Add-Samsung-Phone-0-0.trace.zip"
+ ```
+ _example because I found it confusing, personally_
+ 
+  Traces include screenshots, page snapshots, browser actions, network activity and console messages; they may contain test data. Generated traces are ignored by Git.
