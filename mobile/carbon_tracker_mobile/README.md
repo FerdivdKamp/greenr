@@ -29,6 +29,34 @@ The default API address is `http://10.0.2.2:7285`, which maps from the Android e
 
 Sign in with an existing username or email and password to load items. The session is kept in memory, so sign in again after restarting the app. The app automatically refreshes an expired access token while the session remains valid.
 
+The Questionnaires button opens the website in the device's browser. Configure
+the website origin at build/run time; users sign in separately in the browser.
+For an Android emulator running the frontend on the development host:
+
+```powershell
+flutter run --dart-define=WEBSITE_BASE_URL=http://10.0.2.2:5173
+```
+
+Start Vite with `npm run dev -- --host 0.0.0.0` from `frontend` so the emulator
+can reach it, and start the API as described in the frontend README. For a
+physical device use a reachable host address. For deployed builds set
+`WEBSITE_BASE_URL` to the public HTTPS website address. When it is unset, the
+app reports that the website is not configured.
+
+In that Vite command, `--` passes the remaining options through npm to the
+development server, and `--host 0.0.0.0` makes it listen on all network
+interfaces. Without it, Vite normally listens only on the host's `localhost`,
+which the Android emulator cannot reach as its own `localhost`. The emulator's
+special address `10.0.2.2` reaches the host PC; Vite must also listen for that
+connection.
+
+Listening on all interfaces does not by itself expose Vite to the public
+internet: the router and firewall still control access. Other devices on the
+local network may be able to connect if the firewall allows them. Use a trusted
+network, avoid router port forwarding, and stop the development server with
+Ctrl+C when finished. Frontend environment variables are included in client
+code and must not contain secrets.
+
 ## Test
 
 ```powershell
