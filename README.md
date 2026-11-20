@@ -1,66 +1,132 @@
+﻿# greenr
 
-# greenr
+This repository contains a DuckDB database, an ASP.NET Core API, a React web app,
+and a Flutter mobile app. This guide takes a new developer from a clean checkout
+to signing in and viewing seeded items. Commands use PowerShell; paths are
+relative to the directory stated above each block. Use separate terminals for
+long-running processes and stop them with Ctrl+C.
 
+## Prerequisites
 
-This repository contains 
-database (DuckDb Visuals Studio Code)
-backend (dotnet, Visual Studio)
-mobile app (Flutter, Visual Studio Code)
+- Python 3 and pip for database setup; install the packages in `database/requirements.txt`.
+- .NET 10 SDK, feature band 10.0.4xx, as selected by `global.json`.
+- Node.js 22.19 or newer in the 22.x line and npm for the web app.
+- For mobile: the Flutter SDK, Android development tools and a running Android
+  emulator or connected device. Check your setup with `flutter doctor`.
+- Internet access to restore Python, NuGet, npm and Flutter dependencies.
 
-Each has its own subfolder with a README.md for its part
+## 1. Initialise and seed the database
 
+From the **repository root**:
 
-To get started.
-
-1. The database folder has explicit commands to initialize and seed a local DuckDB database. Follow [database/README.md](database/README.md).
-1. Install the .NET 10 SDK and follow the backend [restore, build, and test guide](backend/CarbonTracker.API/README.md).
-1. Open the mobile app, run the emulator and after that flutter
-
-The mobile app will talk with the database through the backend.
-
-
-
-## Frontend
-
-Uses react typescript and vite
-https://nodejs.org/en/download
-
-
-
-# Functional stuff
-
-## Creating questionnaires
-
-You can use this and save and edit the JSON locally
-https://surveyjs.io/try/reactjs#try-creator
-
-The backend can store and publish supported SurveyJS definitions. Authoring requires
-the `QuestionnaireAdmin` role. Follow the [questionnaire administration guide](backend/CarbonTracker.API/QUESTIONNAIRES.md)
-for setup, version semantics, answer validation rules, and manual checks.
-
-
-
-
-
-
-### Quick Start
-```
+```powershell
 python -m pip install -r database/requirements.txt
 python database/dev_db.py init
+$env:GREENR_DEV_SEED_PASSWORD = Read-Host 'Choose a local development password'
+python database/dev_db.py seed
+Remove-Item Env:GREENR_DEV_SEED_PASSWORD
+```
 
-cd backend\CarbonTracker.API
-# Set Jwt:Key in user secrets before starting; see Authentication testing below.
+`init` creates or migrates `database/carbon_tracker.duckdb` without deleting
+existing data. `seed` adds a local `dev_demo` account, sample items and an active
+questionnaire without overwriting existing fixtures. Use the password you chose
+to sign in; rerunning seed does not change an existing account's password.
+These fixtures are for local development only. See the [database guide](database/README.md)
+for migration troubleshooting and the **destructive** reset command, which
+permanently deletes the local database. Stop the API before running migrations
+or seed commands against its database.
+
+## 2. Configure and run the API
+
+From the **repository root**, create a local signing key in .NET user secrets:
+
+```powershell
+$jwtBytes = New-Object byte[] 32
+$jwtRandom = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$jwtRandom.GetBytes($jwtBytes)
+$jwtRandom.Dispose()
+$jwtKey = [Convert]::ToBase64String($jwtBytes)
+dotnet user-secrets set 'Jwt:Key' $jwtKey --project backend/CarbonTracker.API
+Remove-Variable jwtKey, jwtBytes, jwtRandom
+```
+
+From `backend/CarbonTracker.API`, start the API:
+
+```powershell
 dotnet run --launch-profile http
 ```
 
-Then open: http://localhost:5285/swagger
+The Development profile listens on HTTP ports **5285 and 7285**. Open
+[Swagger](http://localhost:5285/swagger) to inspect the API. User secrets are
+local to your user and are loaded in Development; do not commit signing keys.
+See the [backend guide](backend/CarbonTracker.API/README.md) for configuration,
+client connections and troubleshooting.
+
+## 3. Run the web app and try the first journey
+
+In a second terminal, from `frontend`:
+
+```powershell
+npm ci
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173), sign in as `dev_demo` with
+the seed password, and open **Items** to view the sample items. You can also
+register a new account, which starts with an empty item list. Open
+**Questionnaires** to try the seeded questionnaire. The web app sends `/api`
+requests through Vite's development proxy to the API on port 5285; the API reads
+and writes DuckDB. No frontend environment file is needed for this default.
+See the [frontend guide](frontend/README.md) for overrides and further checks.
+
+## 4. Run the mobile app (optional)
+
+Start an Android emulator first. In another terminal, from
+`mobile/carbon_tracker_mobile`:
+
+```powershell
+flutter pub get
+flutter devices
+flutter run
+```
+
+Select the emulator if prompted and sign in with the same account. The app calls
+the API at `http://10.0.2.2:7285`, the emulator's address for the host, and
+shows that account's items. The [mobile guide](mobile/carbon_tracker_mobile/README.md)
+covers physical devices, other platforms, and opening the web questionnaire.
+
+## Checks
+
+From the **repository root**:
+
+```powershell
+python -m unittest discover -s database/tests -v
+dotnet restore backend/CarbonTracker.API/CarbonTracker.API.sln
+dotnet build backend/CarbonTracker.API/CarbonTracker.API.sln --no-restore
+dotnet test backend/CarbonTracker.API/CarbonTracker.API.sln --no-build --no-restore
+```
+
+From `frontend`, run `npm run lint`, `npm run build`, and `npm test` after
+`npm ci`. From `mobile/carbon_tracker_mobile`, run `flutter analyze` and
+`flutter test` after `flutter pub get`. Tests use isolated data; they do not
+require the development API or database to be running.
+
+## Further guides
+
+- [Database](database/README.md): migrations, fixtures, reset and tests.
+- [Backend](backend/CarbonTracker.API/README.md): API setup and client connections.
+- [Web](frontend/README.md): configuration and frontend tooling.
+- [Mobile](mobile/carbon_tracker_mobile/README.md): emulator and device setup.
+- [Questionnaire administration](backend/CarbonTracker.API/QUESTIONNAIRES.md):
+  roles, versioning and response rules. SurveyJS definitions can be authored
+  with the [SurveyJS creator](https://surveyjs.io/try/reactjs#try-creator).
 
 ## Authentication setup and testing (issue #16)
 
 Run the following PowerShell commands from the repository root. The API targets
 .NET 10, as does the test project; install the .NET 10 SDK in the
 10.0.4xx feature band selected by `global.json`. Initialize the database as
-shown in Quick Start.
+shown in the database setup above.
 
 Generate a local JWT signing key and store it outside the repository:
 

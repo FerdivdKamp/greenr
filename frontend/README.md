@@ -1,8 +1,11 @@
-# React + TypeScript + Vite
+# greenr web frontend
+
+For the complete clean-checkout setup and first journey, start with the
+[root developer guide](../README.md).
 
 ## Local API configuration
 
-Run `npm install`, then `npm run dev` from `frontend`. Start the backend with
+Run `npm ci`, then `npm run dev` from `frontend`. Start the backend with
 its `http` launch profile as described in the [client connection guide](../backend/CarbonTracker.API/README.md#connecting-clients-in-development).
 By default the Vite server at `http://localhost:5173` proxies `/api` to
 `http://localhost:5285`. Copy `.env.example` to `.env.local` if you need to

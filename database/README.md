@@ -1,5 +1,7 @@
 # Development database
 
+For the complete clean-checkout setup, see the [root developer guide](../README.md).
+
 The versioned migrations in `database/migrations` define the DuckDB schema.
 The API does not create or alter tables at runtime. Run these commands from the
 repository root:
@@ -34,8 +36,7 @@ enforce the cross-row `supersedes_id`/`replaced_by_id` links or a unique active
 version without blocking normal publish updates once responses exist. `init`
 checks the links and active-version count every time it runs; application
 writes must keep links within the same family and in version order, with at
-most one active version. Authenticated item creation and claim-derived response
-ownership are separate API work in BE-03 and BE-05.
+most one active version. Authenticated item creation and response ownership use the signed-in account.
 
 The account is `dev_demo` / `dev@example.invalid`, with the local password you
 supplied through `GREENR_DEV_SEED_PASSWORD`. These fixtures are only for local

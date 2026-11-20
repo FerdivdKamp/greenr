@@ -1,5 +1,7 @@
 ## Introduction to the greenr backend
 
+For the complete clean-checkout setup, see the [root developer guide](../../README.md).
+
 
 ### Prerequisites and toolchain
 
