@@ -1,4 +1,4 @@
-﻿import { useSyncExternalStore } from "react";
+﻿import { Suspense, useSyncExternalStore } from "react";
 import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 import { http } from "./lib/http";
 import { sessionStore } from "./lib/session";
@@ -21,5 +21,5 @@ export default function App() {
   return <div className="app-shell"><header><nav aria-label="Main navigation">
     <Link to="/">greenr</Link>
     {session ? <><Link to="/items">Items</Link><Link to="/questionnaires">Questionnaires</Link><Link to="/account">Account</Link><button onClick={signOut}>Sign out</button></> : <><Link to="/login">Sign in</Link><Link to="/register">Create account</Link></>}
-  </nav></header><main>{message && <p role="status">{message}</p>}<Outlet /></main></div>;
+  </nav></header><main>{message && <p role="status">{message}</p>}<Suspense fallback={<p role="status">Loading page?</p>}><Outlet /></Suspense></main></div>;
 }
