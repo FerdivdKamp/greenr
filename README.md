@@ -111,6 +111,12 @@ From `frontend`, run `npm run lint`, `npm run build`, and `npm test` after
 `flutter test` after `flutter pub get`. Tests use isolated data; they do not
 require the development API or database to be running.
 
+Pull requests run these backend, web and mobile checks as separate GitHub Actions
+jobs. CI uses .NET SDK 10.0.401, Node.js 22.19.0 and Flutter 3.32.7; use these
+versions to reproduce a CI result. The backend job runs on Windows because the
+repository includes the Windows DuckDB native library. Dependency caches speed up
+restores, and no development database or repository secrets are required.
+
 ## Further guides
 
 - [Database](database/README.md): migrations, fixtures, reset and tests.
