@@ -8,10 +8,14 @@ using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Filters;
 using System.Data;
 using System.Reflection;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Logging.ClearProviders();
+builder.Logging.AddJsonConsole();
 
 // AuthN/Z
 builder.Services
@@ -34,6 +38,7 @@ builder.Services
   });
 
 builder.Services.AddAuthorization();
+builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 
 builder.Services.AddScoped<IDbConnection>(_ =>
 {
@@ -74,6 +79,7 @@ builder.Services.AddSwaggerGen(c =>
     // Example providers / filters if you use them
     c.ExampleFilters();
     c.DocumentFilter<TagDescriptionsDocumentFilter>();
+    c.DocumentFilter<HealthEndpointDocumentFilter>();
 
     // --- Swagger "Authorize" button for Bearer JWT ---
     var securityScheme = new OpenApiSecurityScheme
@@ -104,6 +110,8 @@ if (!app.Environment.IsDevelopment() &&
     app.Services.GetRequiredService<IPasswordResetDelivery>() is DevelopmentPasswordResetDelivery)
     app.Logger.LogWarning("Password reset delivery is disabled outside Development until a production delivery adapter is registered.");
 
+app.UseMiddleware<SafeRequestLoggingMiddleware>();
+
 app.UseSwagger();
 app.UseSwaggerUI(o =>
 {
@@ -117,6 +125,15 @@ app.UseStatusCodePages(async context => await Results.Problem(statusCode: contex
 if (app.Environment.IsDevelopment()) app.UseCors("DevelopmentWeb");
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapHealthChecks(DatabaseHealthCheck.EndpointPath, new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.Headers.CacheControl = "no-store";
+        var status = report.Status == HealthStatus.Healthy ? "healthy" : "unhealthy";
+        await context.Response.WriteAsJsonAsync(new { status, database = status });
+    }
+}).AllowAnonymous();
 app.MapControllers();
 app.Run();
 

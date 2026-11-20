@@ -34,6 +34,11 @@ public class StartupTests
         var login = paths.GetProperty("/api/auth/login").GetProperty("post");
         Assert.False(login.TryGetProperty("security", out _));
         Assert.True(login.GetProperty("requestBody").GetProperty("content").TryGetProperty("application/json", out _));
+        var health = paths.GetProperty("/health").GetProperty("get");
+        Assert.Equal("Internal", health.GetProperty("tags")[0].GetString());
+        Assert.False(health.TryGetProperty("security", out _));
+        foreach (var status in new[] { "200", "503" })
+            Assert.True(health.GetProperty("responses").GetProperty(status).GetProperty("content").TryGetProperty("application/json", out _));
     }
 
     [Theory]

@@ -1,6 +1,7 @@
 ## Introduction to the greenr backend
 
 For the complete clean-checkout setup, see the [root developer guide](../../README.md).
+For deployment, health checks, logging and recovery, see the [operations decision](OPERATIONS.md).
 
 
 ### Prerequisites and toolchain
